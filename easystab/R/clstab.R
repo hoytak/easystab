@@ -3,7 +3,7 @@ f_beta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation =
   for(l in clusterings){
     X <- l$dists
     d <- dim(X)
-    score_total <- score_total + .Call('_score', t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), t, use_permutation, by_dimension, PACKAGE='clustering')
+    score_total <- score_total + .Call('_score', t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), t, use_permutation, by_dimension)
   }
   -score_total
 }
@@ -16,16 +16,18 @@ make_stability_image <- function(centroids, beta, image_nx, image_ny, image_x_lo
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2){
+perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2, opt_beta = NULL){
   require(graphics)
-  res <- optimize(f_beta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
-  opt_beta <- res$minimum
+  if(is.null(opt_beta)){
+    res <- optimize(f_beta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
+    opt_beta <- res$minimum
+  }
   for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
     scores = rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
     d <- dim(X)
-    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_beta, use_permutations, by_dimension, PACKAGE='clustering')
+    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_beta, use_permutations, by_dimension)
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores = scores
@@ -35,7 +37,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_p
     K_map <- rep(as.integer(NA), d[2])
     labels <- l$labels
 
-    .Call('_sorted_stability_matrix', Z, index_map, K_map, t(X), labels, d[1], d[2], opt_beta, as.integer(Kmap_mode), PACKAGE="clustering")
+    .Call('_sorted_stability_matrix', Z, index_map, K_map, t(X), labels, d[1], d[2], opt_beta, as.integer(Kmap_mode))
 
     l$sorted_stability_matrix <- t(Z)
     l$sorted_stability_matrix_index_map <- index_map
@@ -58,6 +60,21 @@ gen_kmeans_clusterings <- function(clustering_size = 9){
      clusterings[[length(clusterings)+1]] = cl
   }
   clusterings
+}
+
+clusterings_from_kmeans <- function(x, clsnum_min = 2, clsnum_max=10){
+  require(fields)
+  clusterings = list()
+  for(i in clsnum_min:clsnum_max){
+     cl <- kmeans(x, i)
+     cl$labels = cl$cluster
+     cl$dists <- rdist(x, cl$centers)
+     clusterings[[length(clusterings)+1]] = cl
+   }
+  clusterings
+}
+
+clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10){
 }
 
 estimateK <- function(clusterings, p_value_threshold = 0.05){

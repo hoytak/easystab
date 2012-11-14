@@ -1,3 +1,3 @@
-useDynLib(clustering)
+useDynLib(easystab)
 
-export(gen_kmeans_clusterings, perturbationStability,estimateK, plotStabilitySequence, plotStabilityMapO, plotStabilityMap, plotLabeledStabilityMap, make_stability_image, plotStabilityImage, plotStabilityImage1)
+export(gen_kmeans_clusterings, perturbationStability,estimateK, plotStabilitySequence, plotStabilityMapO, plotStabilityMap, plotLabeledStabilityMap, make_stability_image, plotStabilityImage, plotStabilityImage1, clusterings_from_kmeans, clusterings_from_hclust)
