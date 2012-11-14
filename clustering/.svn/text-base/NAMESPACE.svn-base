@@ -1,3 +1,0 @@
-useDynLib(clustering)
-
-export(gen_kmeans_clusterings, perturbationStability,estimateK, plotStabilitySequence, plotStabilityMapO, plotStabilityMap, plotLabeledStabilityMap)
