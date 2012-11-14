@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/repos/test1/!svn/ver/995/clusterings/src
+END
+test.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/repos/test1/!svn/ver/995/clusterings/src/test.cpp
+END
+calc_stab.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/repos/test1/!svn/ver/995/clusterings/src/calc_stab.hpp
+END
+.project.el
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/repos/test1/!svn/ver/995/clusterings/src/.project.el
+END
+simple_rng.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/repos/test1/!svn/ver/995/clusterings/src/simple_rng.hpp
+END
+calc_stab.hpp.debug
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/repos/test1/!svn/ver/995/clusterings/src/calc_stab.hpp.debug
+END
+makevars
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/repos/test1/!svn/ver/995/clusterings/src/makevars
+END
+calc_stab_wrapper.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/repos/test1/!svn/ver/995/clusterings/src/calc_stab_wrapper.cpp
+END
