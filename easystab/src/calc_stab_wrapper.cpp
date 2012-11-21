@@ -1,4 +1,5 @@
 #include "calc_stab.hpp"
+#include "dist_utils.hpp"
 
 #include <R_ext/Rdynload.h>
 #include <Rdefines.h>
@@ -109,3 +110,52 @@ extern "C" SEXP _calculateScores(SEXP scores_, SEXP src_, SEXP n_, SEXP K_, SEXP
   return retval;
 
 }
+
+extern "C" SEXP _calculateAverageLinkageDistances(SEXP _dists, SEXP _labels, SEXP _n, SEXP _K, SEXP _src_dists){
+  double *dists = REAL(_dists);
+  size_t n = INTEGER(_n)[0];
+
+  int * labels = new int[n];
+  for (int i = 0; i<n; i++)
+    labels[i] = INTEGER(_labels)[i]-1;
+
+  size_t K = INTEGER(_K)[0];
+
+  double * src_dists = REAL(_src_dists);
+  
+  calculateAverageLinkageDistances(dists, labels, n, K, src_dists);
+
+  delete [] labels;
+
+  SEXP retval;
+  PROTECT(retval = NEW_INTEGER(1));
+  INTEGER(retval)[0] = 0;
+  UNPROTECT(1);
+
+  return retval;
+
+}
+
+extern "C" SEXP _calculateRepresentativeDistances(SEXP _rep_distances, SEXP _labels, 
+						 SEXP _n, SEXP _K, SEXP _src_dists) {
+  double * rep_distances = REAL(_rep_distances);
+  size_t n = INTEGER(_n)[0];
+  size_t K = INTEGER(_K)[0];
+  double *src_dists = REAL(_src_dists);
+
+  int * labels = INTEGER(_labels);
+  for (int i = 0; i<n; i++)
+    labels[i] = INTEGER(_labels)[i]-1;
+
+  calculateRepresentativeDistances(rep_distances, labels, n, K, src_dists);
+
+  delete [] labels;
+
+  SEXP retval;
+  PROTECT(retval = NEW_INTEGER(1));
+  INTEGER(retval)[0] = 0;
+  UNPROTECT(1);
+
+  return retval;
+}
+

@@ -1,4 +1,4 @@
-f_beta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
+f_theta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
   score_total <- 0
   for(l in clusterings){
     X <- l$dists
@@ -8,26 +8,26 @@ f_beta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation =
   -score_total
 }
 
-make_stability_image <- function(centroids, beta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
+make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
   stab_image <- matrix(as.numeric(NA), ncol = image_ny, nrow = image_nx)
   xvec <- rep(as.numeric(NA), times = as.integer(image_nx))
   yvec <- rep(as.numeric(NA), times = as.integer(image_ny))
-  .Call('_make_stability_image', stab_image, as.integer(image_nx), as.integer(image_ny), image_x_lower, image_x_upper, image_y_lower, image_y_upper, t(centroids), nrow(centroids), beta, xvec, yvec)
+  .Call('_make_stability_image', stab_image, as.integer(image_nx), as.integer(image_ny), image_x_lower, image_x_upper, image_y_lower, image_y_upper, t(centroids), nrow(centroids), theta, xvec, yvec)
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2, opt_beta = NULL){
+perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2, opt_theta = NULL){
   require(graphics)
-  if(is.null(opt_beta)){
-    res <- optimize(f_beta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
-    opt_beta <- res$minimum
+  if(is.null(opt_theta)){
+    res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
+    opt_theta <- res$minimum
   }
   for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
     scores = rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
     d <- dim(X)
-    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_beta, use_permutations, by_dimension)
+    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, use_permutations, by_dimension)
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores = scores
@@ -37,7 +37,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_p
     K_map <- rep(as.integer(NA), d[2])
     labels <- l$labels
 
-    .Call('_sorted_stability_matrix', Z, index_map, K_map, t(X), labels, d[1], d[2], opt_beta, as.integer(Kmap_mode))
+    .Call('_sorted_stability_matrix', Z, index_map, K_map, t(X), labels, d[1], d[2], opt_theta, as.integer(Kmap_mode))
 
     l$sorted_stability_matrix <- t(Z)
     l$sorted_stability_matrix_index_map <- index_map
@@ -74,7 +74,28 @@ clusterings_from_kmeans <- function(x, clsnum_min = 2, clsnum_max=10){
   clusterings
 }
 
-clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10){
+clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10, method = "average"){
+  dx <- dist(x)
+  hc <- hclust(dx)
+  n <- nrow(x)
+  if(n<clsnum_max){
+    clsnum_max <- n
+  }
+  res <- cutree(hc, k=clsnum_min:clsnum_max)
+  clusterings = list()
+  clsnum_min = as.integer(clsnum_min)
+  clsnum_max = as.integer(clsnum_max)
+  for(K in clsnum_min:clsnum_max){
+    labels <- as.vector(res[,K-clsnum_min+1])
+    dist_matrix <- matrix(as.numeric(NA), ncol = n, nrow = K)
+    if(method == "average"){
+      .Call('_calculateAverageLinkageDistances', dist_matrix, labels, n, K, dx)
+    }else if (method == "median"){
+      .Call('_calculateRepresentativeDistances', dist_matrix, labels, n, K, dx)
+    }
+    clusterings[[length(clusterings)+1]] <- list(dists = t(dist_matrix), labels = labels)
+  }
+  clusterings
 }
 
 estimateK <- function(clusterings, p_value_threshold = 0.05){
@@ -164,8 +185,8 @@ plotLabeledStabilityMap <- function(clustering){
   axis(1, at=0.5:(ncol+0.5), labels=c(1:ncol, 'C'))
 }
 
-plotStabilityImage <- function(centroids, beta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
-  res <- stab_image <- make_stability_image(centroids, beta, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper)
+plotStabilityImage <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
+  res <- stab_image <- make_stability_image(centroids, theta, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper)
   require(grDevices)
   require(plotrix)
   color2D.matplot(res$stab_image[nrow(res$stab_image):1,], border=NA, xlab=NA, ylab=NA, axes=FALSE)
@@ -178,8 +199,8 @@ plotStabilityImage <- function(centroids, beta, image_nx, image_ny, image_x_lowe
   axis(2, at=yarr+0.5, labels=res$yvec[yarr])
 }
 
-plotStabilityImage1 <- function(centroids, beta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
-  res <- stab_image <- make_stability_image(centroids, beta, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper)
+plotStabilityImage1 <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
+  res <- stab_image <- make_stability_image(centroids, theta, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper)
   require(graphics)
   image(res$xvec, res$yvec, res$stab_image[nrow(res$stab_image):1,])
 }
