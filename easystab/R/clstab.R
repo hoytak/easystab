@@ -8,7 +8,7 @@ f_theta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation 
   -score_total
 }
 
-get_opt_theta <- function(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
+getOptTheta <- function(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
     res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutation, by_dimension = by_dimension)
     res$minimum
 }
@@ -27,7 +27,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_p
   if(is.null(theta)){
 #    res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
 #    opt_theta <- res$minimum
-    opt_theta <- get_opt_theta(clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutations, by_dimension = by_dimension)
+    opt_theta <- getOptTheta(clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutations, by_dimension = by_dimension)
   }
   for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
@@ -49,6 +49,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_p
     l$sorted_stability_matrix <- t(Z)
     l$sorted_stability_matrix_index_map <- index_map
     l$sorted_stability_matrix_cluster_map <- K_map
+    l$opt_theta <- opt_theta
     clusterings[[idx]] <- l
   }
 
@@ -81,9 +82,9 @@ clusterings_from_kmeans <- function(x, clsnum_min = 2, clsnum_max=10){
   clusterings
 }
 
-clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10, method = "average"){
-  dx <- dist(x)
-  hc <- hclust(dx)
+clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10, dist_method = "euclidean", method = "average"){
+  dx <- dist(x, method = dist_method)
+  hc <- hclust(dx, method = method)
   n <- nrow(x)
   if(n<clsnum_max){
     clsnum_max <- n
@@ -136,12 +137,12 @@ plotStabilitySequence <- function(clusterings){
   boxplot(score_list)
 }
 
-plotStabilityMapO <- function(clustering){
-  sorted_stability_matrix = clustering$sorted_stability_matrix
-  require(plotrix)
-  cellcol<-color.scale(sorted_stability_matrix,c(0,1),0,0)
-  color2D.matplot(sorted_stability_matrix, cellcolors=cellcol, xlab=NA, ylab=NA, axes=FALSE)
-}
+#plotStabilityMapO <- function(clustering){
+#  sorted_stability_matrix = clustering$sorted_stability_matrix
+#  require(plotrix)
+#  cellcol<-color.scale(sorted_stability_matrix,c(0,1),0,0)
+#  color2D.matplot(sorted_stability_matrix, cellcolors=cellcol, xlab=NA, ylab=NA, axes=FALSE)
+#}
 
 plotStabilityMap <- function(clustering){
   sorted_stability_matrix = clustering$sorted_stability_matrix
