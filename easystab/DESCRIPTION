@@ -1,17 +1,12 @@
 Package: easystab
 Version: 0.999999-0
-Date: 2012-06-22
-Title: A Package to Test extension
-Description: Fit linear and generalized linear mixed-effects models.
-        This package is for testing purpose only
-        developed up to 2011.
-Author: Zongjun Hu <zhu@med.miami.edu>
-Maintainer: <lme4-authors@R-forge.wu-wien.ac.at>
-Depends: R(>= 2.11.1)
+Date: 2012-11-28
+Title: Clustering Perturbation Stability Analysis
+Description: Clustering perturbation stability analysis toolkit
+Author: Zongjun Hu <zhu@med.miami.edu>, Hoyt Koepke <hoytak@gmail.com>, Bertrand Clarke <BClarke2@med.miami.edu>
+Maintainer: Zongjun Hu <zhu@med.miami.edu>
+Depends: R(>= 2.11.1), graphics, fields, plotrix, grDevices
 LazyData: yes
 License: GPL (>= 2)
-URL: http://lme4.r-forge.r-project.org/
-Packaged: 2012-06-22 19:12:13 UTC; maechler
-Repository: CRAN
-Date/Publication: 2012-06-23 05:05:07
+URL: https://github.com/zongjunhu/easystab
 

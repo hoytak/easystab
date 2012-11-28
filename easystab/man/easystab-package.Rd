@@ -18,3 +18,11 @@
     LazyLoad: \tab yes\cr
   }
 }
+\examples{
+library(easystab)
+data(sample)
+pl<-perturbationStability(clusterings)
+res<-estimateK(pl)
+l<-pl[[res$estimate_index]]
+plotStabilitySequence(clusterings)
+}
