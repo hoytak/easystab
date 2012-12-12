@@ -8,7 +8,7 @@ f_theta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation 
   -score_total
 }
 
-getOptTheta <- function(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
+ <- getOptTheta <- function(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
     res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutation, by_dimension = by_dimension)
     res$minimum
 }
@@ -21,7 +21,7 @@ make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_l
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2, theta = NULL){
+perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta = NULL){
   require(graphics)
   opt_theta = theta
   if(is.null(theta)){

@@ -1,15 +1,19 @@
 \name{perturbationStability}
 \alias{perturbationStability}
-\title{calculate perturbation stability of a list of clusterings}
-\description{calculate perturbation stability of a list of clusterings}
+\title{Calculate perturbation stability of a list of clusterings}
+\description{Calculate the perturbation stability of a list of
+  clusterings. 
+
+}
 \usage{
-perturbationStability(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 2, theta = NULL)
+perturbationStability(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta = NULL)
 }
 \arguments{
-  \item{clusterings}{A list of clustering. Each clustering is a list
-    with a distance to clustering centroid matrix}
+  \item{clusterings}{A list of clustering. Each clustering contains a
+    distance to centroid or distance to clustering matrix.}
 
-  \item{n_baselines}{n_baselines}
+  \item{n_baselines}{n_baselines}  The number of random baseline
+  matrices to use in computing the distance 
 
   \item{seed}{seed}
 
@@ -17,7 +21,11 @@ perturbationStability(clusterings, n_baselines = 32, seed = 0, use_permutations 
 
   \item{by_dimension}{by_dimension}
 
-  \item{Kmap_mode}{Kmap_mode}
+  \item{Kmap_mode}{Kmap_mode} Determines how the clusters in the cluster
+   stability plot are organized. Kmap_mode = 0 (default) does not
+   reorder the clusters from the original label map. Kmap_mode = 1 sorts
+   them by cluster size, and Kmap_mode = 2 sorts them by cluster 
+   are sorted 
 
   \item{theta}{If null, an optimized theta will be calcuated within function}
 }
