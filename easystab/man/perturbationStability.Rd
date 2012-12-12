@@ -2,36 +2,46 @@
 \alias{perturbationStability}
 \title{Calculate perturbation stability of a list of clusterings}
 \description{Calculate the perturbation stability of a list of
-  clusterings. 
+  clusterings. }
 
-}
-\usage{
-perturbationStability(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta = NULL)
-}
-\arguments{
-  \item{clusterings}{A list of clustering. Each clustering contains a
-    distance to centroid or distance to clustering matrix.}
+\usage{ perturbationStability(clusterings, n_baselines = 32, seed = 0,
+use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta =
+NULL) }
+
+\arguments{ 
+
+  \item{clusterings}{A list of clusterings. For each clustering of
+\code{n} points into \code{K} clusters (\code{K} can be different across
+clusterings), an \code{n} by \code{K} distance to centroid or distance
+to clustering matrix \code{dists} and array of \code{n} integer labels
+\code{labels} in \code{1,...,K} is expected.}
 
   \item{n_baselines}{n_baselines}  The number of random baseline
-  matrices to use in computing the distance 
+  matrices to use in computing the stability scores.  Increase this
+  number to get more accuracy 
 
-  \item{seed}{seed}
-
-  \item{use_permutations}{use_permutations}
-
-  \item{by_dimension}{by_dimension}
+  \item{seed}{seed} The random seed used for calculating the baseline
+  matrices.
 
   \item{Kmap_mode}{Kmap_mode} Determines how the clusters in the cluster
-   stability plot are organized. Kmap_mode = 0 (default) does not
+   stability heatmap are organized. Kmap_mode = 0 (default) does not
    reorder the clusters from the original label map. Kmap_mode = 1 sorts
-   them by cluster size, and Kmap_mode = 2 sorts them by cluster 
-   are sorted 
+   them by cluster size, and Kmap_mode = 2 sorts them by individual
+   cluster stability.
 
-  \item{theta}{If null, an optimized theta will be calcuated within function}
-}
-\value{
-  A list of new cluserings. Each clustering has extra components
-  including \code{sorted_stability_matrix},
-  \code{sorted_stability_matrix_index_map},
-  \code{sorted_stability_matrix_cluster_map}, \code{opt_theta}
+   \item{theta}{The non-negative rate parameter passed to the shifted exponential prior on
+     the perturbations.  The parameter indexes the strength of the
+     perturbations, with smaller values translating into stronger
+     perturbations.  If NULL, theta is chosen by optimizing the overall
+     stability against the baseline distributions.}
+ }
+ 
+ \value{
+   Returns a list of clusterings and stability information matching the
+  supplied list of clusterings.  Each object in this list contains the
+  original \code{dists} and \code{labels}, the scalar stability score
+  \code{stability_score}, the empirical collection of stability scores
+  \code{scores}, the theta parameter used \code{theta}, and the components of
+  the sorted stability matrix used for plotting the behavior of the
+  clustering.
 }

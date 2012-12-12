@@ -1,19 +1,31 @@
 \name{getOptTheta}
 \alias{getOptTheta}
-\title{calculate optimized theta value for a list of clusters}
-\description{calculate the minimum stability score of a list of
-  clustering inputs}
+\title{Calculates the optimal prior parameter 
+
+  \description{Calculate the optimal prior parameter theta by maximizing
+    the difference in overall stability aganst the baseline
+    distributions. The theta parameter indexes the strength of the
+    perturbations, with smaller values translating into stronger
+    perturbations. 
+  }
 \usage{
-getOptTheta(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE)
+getOptTheta(clusterings, seed = 0, n_baselines = 32)
 }
 \arguments{
-  \item{clusterings}{A list of clusters. Each cluster is expressed as
-    a list with a component named as \code{dists}, which is the cluster point to centroid distance matrix}
-  \item{seed}{seed, default to 0}
-  \item{n_baselines}{n_baselines, default to 32}
-  \item{use_permutation}{use_permutation switch, default to FALSE}
-  \item{by_dimension}{by_dimension switch, default to FALSE}
+
+  \item{clusterings}{A list of clusters. A list of clusterings. For each
+clustering of \code{n} points into \code{K} clusters (\code{K} can be
+different across clusterings), an \code{n} by \code{K} distance to
+centroid or distance to clustering matrix \code{dists} and array of
+\code{n} integer labels \code{labels} in \code{1,...,K} is expected.}
+
+  \item{seed}{Random seed used for generating the baseline stability matrices.}
+
+  \item{n_baselines}{ The number of random baseline matrices to use in
+  computing the stability scores.  Increase this number to get more
+  accuracy in distinguishing between clusterings. }
 }
+
 \seealso{
   \code{\link{easystab}}, \code{\link{perturbationStability}}
 }

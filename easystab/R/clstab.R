@@ -1,15 +1,15 @@
-f_theta <- function(t, clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
+f_theta <- function(t, clusterings, seed = 0, n_baselines = 32){
   score_total <- 0
   for(l in clusterings){
     X <- l$dists
     d <- dim(X)
-    score_total <- score_total + .Call('_score', t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), t, use_permutation, by_dimension)
+    score_total <- score_total + .Call('_score', t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), t, FALSE, FALSE)
   }
   -score_total
 }
 
- <- getOptTheta <- function(clusterings, seed = 0, n_baselines = 32, use_permutation = FALSE , by_dimension = FALSE){
-    res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutation, by_dimension = by_dimension)
+getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
+    res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001, clusterings = clusterings, seed = seed, n_baselines = n_baselines)
     res$minimum
 }
 
@@ -21,20 +21,20 @@ make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_l
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta = NULL){
+perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_mode = 0, theta = NULL){
   require(graphics)
   opt_theta = theta
   if(is.null(theta)){
 #    res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
 #    opt_theta <- res$minimum
-    opt_theta <- getOptTheta(clusterings, seed = seed, n_baselines = n_baselines, use_permutation = use_permutations, by_dimension = by_dimension)
+    opt_theta <- getOptTheta(clusterings, seed = seed, n_baselines = n_baselines)
   }
   for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
     scores = rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
     d <- dim(X)
-    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, use_permutations, by_dimension)
+    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores = scores
@@ -49,7 +49,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, use_p
     l$sorted_stability_matrix <- t(Z)
     l$sorted_stability_matrix_index_map <- index_map
     l$sorted_stability_matrix_cluster_map <- K_map
-    l$opt_theta <- opt_theta
+    l$theta <- opt_theta
     clusterings[[idx]] <- l
   }
 
