@@ -149,14 +149,9 @@ void stability_matrix(double *dest, double *X, size_t n, size_t K, double beta) 
 }
 
 void sort_stability_matrix(double *dest, int *indexes, int *K_map, 
-			   double *src_stab_matrix, int *_labels,
+			   double *src_stab_matrix, int *labels,
 			   size_t n, size_t K, int Kmap_mode)
 {
-  // Convert the labels to 0...K-1 indexing from 1...K indexing.
-  vector<int> labels(n);
-  for(size_t i = 0; i < n; ++i)
-    labels[i] = _labels[i] - 1;
-
   vector<size_t> Km(K);
   {
     vector<size_t> avg_index(K, 0);
@@ -181,8 +176,11 @@ void sort_stability_matrix(double *dest, int *indexes, int *K_map,
     }
       
 
-    for(size_t k = 0; k < K; ++k) 
+    for(size_t k = 0; k < K; ++k)
       Km[K_mapping[k]] = k;
+
+    for(size_t k = 0; k < K; ++k)
+      K_map[k] = int(Km[k]);
   }
 
   // Get the best version for the mapping
@@ -346,12 +344,7 @@ double score(const Array1& dist, size_t n, size_t K, size_t seed,
 // Now for the silhouette distances
 
 static inline double calculateSilhouette(double *silhouettes,  double *silhouette_distances, 
-				       int *_labels, size_t n, size_t K) {
-
-  // Convert the labels to 0...K-1 indexing from 1...K indexing.
-  vector<int> labels(n);
-  for(size_t i = 0; i < n; ++i)
-    labels[i] = _labels[i] - 1;
+				       int *labels, size_t n, size_t K) {
 
   double silhouette_total = 0;
 

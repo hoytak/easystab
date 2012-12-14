@@ -135,61 +135,45 @@ plotStabilitySequence <- function(clusterings){
   boxplot(score_list)
 }
 
-#plotStabilityMapO <- function(clustering){
-#  sorted_stability_matrix = clustering$sorted_stability_matrix
-#  require(plotrix)
-#  cellcol<-color.scale(sorted_stability_matrix,c(0,1),0,0)
-#  color2D.matplot(sorted_stability_matrix, cellcolors=cellcol, xlab=NA, ylab=NA, axes=FALSE)
-#}
-
-plotStabilityMap <- function(clustering){
-  sorted_stability_matrix = clustering$sorted_stability_matrix
-  ncol = dim(sorted_stability_matrix)[2]
-  require(grDevices)
-  require(plotrix)
-  colors <- colorRampPalette(c("black","red", "yellow", "white"))
-  mi = 0 #min(sorted_stability_matrix)
-  ma = 1 #max(sorted_stability_matrix)
-  mx <- apply(sorted_stability_matrix, 1:2, colors)
-  color2D.matplot(sorted_stability_matrix, cellcolors=mx, border=NA, xlab=NA, ylab=NA, axes=FALSE)
-  axis(3, at=0.5:(ncol-0.5), labels=1:ncol)
-}
-
-plotLabeledStabilityMap <- function(clustering, labels, label_colors = NULL){
+plotStabilityMap <- function(clustering, classes = NULL, class_colors = NULL){
+  
   require(grDevices)
   require(plotrix)
   
   sorted_stability_matrix <- clustering$sorted_stability_matrix
   index_map <- clustering$sorted_stability_matrix_index_map
-  
-  label_colors <- brewer.pal(max(labels), "Set3")
-
-  if(is.null(label_colors)){
-    require(RColorBrewer)
-    colors <- colorRampPalette(c("black","red", "yellow", "white"))
-  }else{
-    colors <- label_colors
-  }
-  
-  mi = min(sorted_stability_matrix)
-  ma = max(sorted_stability_matrix)
-  matrix_colors <- apply(sorted_stability_matrix, 1:2, colors)
 
   nrow = dim(sorted_stability_matrix)[1]
   ncol = dim(sorted_stability_matrix)[2]
+
+  colors <- colorRampPalette(c("black","red", "yellow", "white"))
+  matrix_colors <- apply(sorted_stability_matrix, 1:2, colors)
   
-  label_column_colors= rep(0, times = nrow)
+  if(is.null(classes)) {
+    
+    mx <- apply(sorted_stability_matrix, 1:2, colors)
+    color2D.matplot(sorted_stability_matrix, cellcolors=mx, border=NA, xlab=NA, ylab=NA, axes=FALSE)
+    axis(3, at=0.5:(ncol-0.5), labels=1:ncol)
+    
+  } else {
   
-  for(idx in 1:nrow){
-    label_column_colors[idx] <- label_colors[labels[index_map[idx]]]
+    if(is.null(class_colors)){
+      require(RColorBrewer)
+      class_colors <- brewer.pal(max(classes), "Set3")
+    }
+  
+    class_column_colors= rep(0, times = nrow)
+  
+    for(idx in 1:nrow){
+      class_column_colors[idx] <- class_colors[classes[index_map[idx]]]
+    }
+
+    matrix_colors <- cbind(matrix_colors, class_column_colors)
+    extended_matrix <- cbind(sorted_stability_matrix, classes)
+    color2D.matplot(extended_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
+    axis(1, at=0.5:(ncol+0.5), classes = c(1:ncol, 'C'))
+    class_colors
   }
-
-  matrix_colors <- cbind(matrix_colors, label_column_colors)
-  extended_matrix <- cbind(sorted_stability_matrix, labels)
-  color2D.matplot(extended_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
-  axis(1, at=0.5:(ncol+0.5), labels=c(1:ncol, 'C'))
-
-  colors
 }
 
 plotStabilityImage <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
