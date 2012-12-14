@@ -1,17 +1,29 @@
 \name{estimateK}
 \alias{estimateK}
-\title{search cluster with maximum stability}
-\description{parse result cluster list generated from
-  pertubationStability function. find the cluster with maximum
-  perturbation stability}
+
+\title{Estimates the number of clusters.}
+  
+\description{
+
+  Estimates the number of clusters in a dataset from a list of
+clusterings and stability information as produced by
+\code{perturbationStablity}.  The cluster is chosen as the one with the
+fewest number of clusters that is statistically indistinguishable from
+the most stable clustering with p-value \code{p_value}.
+
 \usage{
-estimateK(clusterings, p_value_threshold)
+estimateK(clusterings, p_value = 0.05)
 }
+
 \arguments{
-  \item{clusterings}{A list of clusters with perturbation stability
-    analysis results. It is the result from perturbationStablity function}
-  \item{p_value_threshold}{p_value_threshold. optional. default to 0.05}
+  \item{clusterings}{The output of \code{perturbationStablity}
+-- a list of clusters with perturbation stability analyses. }
+
+  \item{p_value}{p-value requirement for saying that one clustering is
+    more stable than another.}
 }
+
 \value{
-  A list object with components estimate_K and estimate_index
+  A list object with components estimated_K and estimated_index.
 }
+

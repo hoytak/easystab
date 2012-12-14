@@ -149,10 +149,13 @@ void stability_matrix(double *dest, double *X, size_t n, size_t K, double beta) 
 }
 
 void sort_stability_matrix(double *dest, int *indexes, int *K_map, 
-			   double *src_stab_matrix, int *labels,
+			   double *src_stab_matrix, int *_labels,
 			   size_t n, size_t K, int Kmap_mode)
 {
-
+  // Convert the labels to 0...K-1 indexing from 1...K indexing.
+  vector<int> labels(n);
+  for(size_t i = 0; i < n; ++i)
+    labels[i] = _labels[i] - 1;
 
   vector<size_t> Km(K);
   {
@@ -290,8 +293,6 @@ void calculateScores(double * scores, const Array& src, size_t n, size_t K, size
   
   const size_t n_threads = omp_get_max_threads();
 
-  
-
   vector<vector<double> > data_buffers(n_threads);
   vector<vector<double> > stab_buffers(n_threads);
   vector<Buffers> buffers(n_threads, Buffers(K));
@@ -345,7 +346,12 @@ double score(const Array1& dist, size_t n, size_t K, size_t seed,
 // Now for the silhouette distances
 
 static inline double calculateSilhouette(double *silhouettes,  double *silhouette_distances, 
-				       int *labels, size_t n, size_t K) {
+				       int *_labels, size_t n, size_t K) {
+
+  // Convert the labels to 0...K-1 indexing from 1...K indexing.
+  vector<int> labels(n);
+  for(size_t i = 0; i < n; ++i)
+    labels[i] = _labels[i] - 1;
 
   double silhouette_total = 0;
 
@@ -376,51 +382,6 @@ static inline double calculateSilhouette(double *silhouettes,  double *silhouett
   }
 
   return silhouette_total / n;
-}
-
-static inline double variation_of_information(int *labels1, int *labels2, size_t n, size_t K) {
-  
-  vector<int> lv1(labels1, labels1 + n);
-  vector<int> lv2(labels2, labels2 + n);
-	 
-  vector<double> p1(K, 0), p2(K, 0);
-  
-  for(size_t i = 0; i < lv1.size(); ++i)
-    ++p1[ lv1[i] ];
-
-  for(size_t i = 0; i < lv2.size(); ++i)
-    ++p2[ lv2[i] ];
-
-  vector<double> p_kk(K*K, 0);
-
-  for(size_t i = 0; i < n; ++i)
-    ++p_kk[K*lv1[i] + lv2[i]];
-
-  for(size_t i = 0; i < p1.size(); ++i) 
-    p1[i] /= n;
-  for(size_t i = 0; i < p2.size(); ++i) p2[i] /= n;
-  for(size_t i = 0; i < p_kk.size(); ++i) p_kk[i] /= n;
-
-  double hc_1 = 0; 
-  double hc_2 = 0; 
-
-  for(size_t i = 0; i < p1.size(); ++i) 
-    hc_1 -= (p1[i] <= 0) ? 0 : (p1[i] * log(p1[i]));
-
-  for(size_t i = 0; i < p2.size(); ++i) 
-    hc_2 -= (p2[i] <= 0) ? 0 : (p2[i] * log(p2[i]));
-  
-  double icc = 0;
-
-  for(size_t k1 = 0; k1 < K; ++k1) {
-    for(size_t k2 = 0; k2 < K; ++k2) {
-      double p_kk_e = p_kk[k1*K + k2];
-
-      icc += (p_kk_e == 0) ? 0 : p_kk_e * log( p_kk_e / (p1[k1]*p2[k2]));
-    }
-  }
-
-  return hc_1 + hc_2 - 2*icc;
 }
 
 static inline double sqr(double x) {return x*x;}

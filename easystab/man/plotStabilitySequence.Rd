@@ -1,12 +1,20 @@
 \name{plotStabilitySequence}
+
 \alias{plotStabilitySequence}
-\title{plot stability sequence based on clustering stability analysis results}
-\description{perturbationStability function post processing. plot stability sequence based on clustering stability analysis results}
+
+\title{Plot the stability scores produced by perturbationStability as a
+  sequence of box plots.}
+
+\description{Summary display of the output of the perturbationStability
+  function. Plot the stability scores produced by perturbationStability as a
+  sequence of box plots.}
+
 \usage{
-plotStablilitySequence(clusterings)
+\code{plotStablilitySequence(clusterings)}
 }
 \arguments{
-  \item{clusterings}{A list of clusters with perturbation stability
-    analysis results. It is the result from perturbationStablity function}
+  \item{clusterings}{The output of
+    \code{perturbationStablity}
+-- a list of clusters with perturbation stability analyses. }
 }
 

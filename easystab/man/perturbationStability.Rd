@@ -1,12 +1,14 @@
 \name{perturbationStability}
+
 \alias{perturbationStability}
+
 \title{Calculate perturbation stability of a list of clusterings}
+
 \description{Calculate the perturbation stability of a list of
   clusterings. }
 
 \usage{ perturbationStability(clusterings, n_baselines = 32, seed = 0,
-use_permutations = FALSE, by_dimension = FALSE, Kmap_mode = 0, theta =
-NULL) }
+Kmap_mode = 0, theta = NULL) }
 
 \arguments{ 
 

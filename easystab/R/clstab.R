@@ -70,22 +70,19 @@ gen_kmeans_clusterings <- function(clustering_size = 9){
   clusterings
 }
 
-clusterings_from_kmeans <- function(x, clsnum_min = 2, clsnum_max=10){
-  require(fields)
-  clusterings = list()
-  for(i in clsnum_min:clsnum_max){
-     cl <- kmeans(x, i)
-     cl$labels = cl$cluster
-     cl$dists <- rdist(x, cl$centers)
-     clusterings[[length(clusterings)+1]] = cl
-   }
+kmeans_stability <- function(x, clusterings) {
+
+  for(cl in clusterings) {
+    cl$labels = cl$cluster
+    cl$dists <- rdist(x, cl$centers)
+  }
+  
   clusterings
 }
 
-clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10, dist_method = "euclidean", method = "average"){
-  dx <- dist(x, method = dist_method)
-  hc <- hclust(dx, method = method)
-  n <- nrow(x)
+hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average"){
+  n <- nrow(dx)
+  
   if(n<clsnum_max){
     clsnum_max <- n
   }
@@ -106,26 +103,27 @@ clusterings_from_hclust <- function(x, clsnum_min = 2, clsnum_max = 10, dist_met
   clusterings
 }
 
-estimateK <- function(clusterings, p_value_threshold = 0.05){
+estimateK <- function(clusterings, p_value = 0.05){
   get_stability <- function(l) l$stability
   stability_vector <- sapply(clusterings, get_stability)
+  
   e_idx = which.max(stability_vector)
   for(idx in 1:(e_idx-1)){
     res <- t.test(clusterings[[idx]]$scores, clusterings[[e_idx]]$scores)
     t_stat <- res$statistic
-    p_value <- res$p.value * 0.5
-    if(p_value > p_value_threshold){
+    pv <- res$p.value * 0.5
+    if(pv > p_value){
       break
     }
   }
   if(clusterings[[e_idx]]$stability_quantiles[1] <=0 ){
-    estimate_K = as.integer(1)
-    estimate_index = as.integer(NA)
+    estimated_K = as.integer(1)
+    estimated_index = as.integer(NA)
   }else{
-   estimate_K = dim(clusterings[[e_idx]]$dists)[2]
-   estimate_index = e_idx
+   estimated_K = dim(clusterings[[e_idx]]$dists)[2]
+   estimated_index = e_idx
   }
-  list(estimate_K = estimate_K, estimate_index = estimate_index)
+  list(estimated_K = estimated_K, estimated_index = estimated_index)
 }
 
 plotStabilitySequence <- function(clusterings){
@@ -149,34 +147,33 @@ plotStabilityMap <- function(clustering){
   ncol = dim(sorted_stability_matrix)[2]
   require(grDevices)
   require(plotrix)
-  colors <- heat.colors(512)
-  mi = min(sorted_stability_matrix)
-  ma = max(sorted_stability_matrix)
-  mx <- apply(sorted_stability_matrix, 1:2, function(x) colors[as.integer((x-mi)*511/(ma-mi))+1])
+  colors <- colorRampPalette(c("black","red", "yellow", "white"))
+  mi = 0 #min(sorted_stability_matrix)
+  ma = 1 #max(sorted_stability_matrix)
+  mx <- apply(sorted_stability_matrix, 1:2, colors)
   color2D.matplot(sorted_stability_matrix, cellcolors=mx, border=NA, xlab=NA, ylab=NA, axes=FALSE)
   axis(3, at=0.5:(ncol-0.5), labels=1:ncol)
 }
 
-plotLabeledStabilityMap <- function(clustering){
+plotLabeledStabilityMap <- function(clustering, labels, label_colors = NULL){
   require(grDevices)
   require(plotrix)
-
+  
   sorted_stability_matrix <- clustering$sorted_stability_matrix
   index_map <- clustering$sorted_stability_matrix_index_map
-  labels <- clustering$labels
-
-  index_map <- index_map
-  labels <- labels
   
-  label_colors <- c("#0000FFFF", "#007F00FF", "#FF00FFFF", "#00FF00FF",
-                    "#FFFFFFFF", "#00007FFF", "#000000FF", "#7F7F7FFF",
-                    "#F29C9CFF", "#FF0000FF", "#FFFF00FF", "#CB7622FF")
+  label_colors <- brewer.pal(max(labels), "Set3")
 
-  colors <- heat.colors(256)
-
+  if(is.null(label_colors)){
+    require(RColorBrewer)
+    colors <- colorRampPalette(c("black","red", "yellow", "white"))
+  }else{
+    colors <- label_colors
+  }
+  
   mi = min(sorted_stability_matrix)
   ma = max(sorted_stability_matrix)
-  matrix_colors <- apply(sorted_stability_matrix, 1:2, function(x) colors[as.integer((x-mi)*255/(ma-mi))+1])
+  matrix_colors <- apply(sorted_stability_matrix, 1:2, colors)
 
   nrow = dim(sorted_stability_matrix)[1]
   ncol = dim(sorted_stability_matrix)[2]
@@ -191,6 +188,8 @@ plotLabeledStabilityMap <- function(clustering){
   extended_matrix <- cbind(sorted_stability_matrix, labels)
   color2D.matplot(extended_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
   axis(1, at=0.5:(ncol+0.5), labels=c(1:ncol, 'C'))
+
+  colors
 }
 
 plotStabilityImage <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
