@@ -10,6 +10,7 @@ clusterings and stability information as produced by
 \code{perturbationStablity}.  The cluster is chosen as the one with the
 fewest number of clusters that is statistically indistinguishable from
 the most stable clustering with p-value \code{p_value}.
+}
 
 \usage{
 estimateK(clusterings, p_value = 0.05)

@@ -70,13 +70,15 @@ gen_kmeans_clusterings <- function(clustering_size = 9){
   clusterings
 }
 
-kmeans_stability <- function(x, clusterings) {
+kmeans_stability <- function(x, kmeans_output_list) {
 
-  for(cl in clusterings) {
+  clusterings <- list()
+  for(cl in kmeans_output_list) {
     cl$labels = cl$cluster
     cl$dists <- rdist(x, cl$centers)
+    clusterings[[length(clusterings)+1]] = cl
   }
-  
+
   clusterings
 }
 

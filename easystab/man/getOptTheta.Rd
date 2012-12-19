@@ -1,13 +1,14 @@
 \name{getOptTheta}
 \alias{getOptTheta}
-\title{Calculates the optimal prior parameter 
+\title{Calculates the optimal prior parameter }
 
-  \description{Calculate the optimal prior parameter theta by maximizing
-    the difference in overall stability aganst the baseline
-    distributions. The theta parameter indexes the strength of the
-    perturbations, with smaller values translating into stronger
-    perturbations. 
-  }
+\description{Calculate the optimal prior parameter theta by maximizing
+  the difference in overall stability aganst the baseline
+  distributions. The theta parameter indexes the strength of the
+  perturbations, with smaller values translating into stronger
+  perturbations. 
+}
+
 \usage{
 getOptTheta(clusterings, seed = 0, n_baselines = 32)
 }

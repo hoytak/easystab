@@ -9,12 +9,12 @@
   returns a corresponding list of clusterings suitable for input to
   \code{perturbationStability}.}
 
-\usage{ kmeans_stability(x, clusterings)}
+\usage{ kmeans_stability(x, kmeans_output_list)}
 
 \arguments{
   \item{x}{Matrix or data frame object containing the clustered data.}
   
-  \item{clusterings}{A list of clusterings, each being the output of the
+  \item{kmeans_output_list}{A list of clusterings, each being the output of the
     kmeans function.}
 }
 
