@@ -32,6 +32,7 @@ library(easystab)
 data(sample)
 pl<-perturbationStability(clusterings)
 res<-estimateK(pl)
-l<-pl[[res$estimate_index]]
-plotStabilitySequence(clusterings)
+l<-pl[[res$estimated_index]]
+plotStabilitySequence(pl)
+plotStablilityMap(l)
 }
