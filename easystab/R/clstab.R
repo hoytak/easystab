@@ -159,13 +159,16 @@ plotStabilityMap <- function(clustering, classes = NULL, class_colors = NULL){
   nrow <- dim(sorted_stability_matrix)[1]
   ncol <- dim(sorted_stability_matrix)[2]
 
-  colors <- colorRampPalette(c("black","red", "yellow", "white"))
-  matrix_colors <- apply(sorted_stability_matrix, 1:2, colors)
+  color_func <- colorRampPalette(c("black","red", "yellow", "white"))
+  color_map <-  color_func(512)
+
+  mi = min(sorted_stability_matrix)
+  ma = max(sorted_stability_matrix)
   
   if(is.null(classes)) {
     
-    mx <- apply(sorted_stability_matrix, 1:2, colors)
-    color2D.matplot(sorted_stability_matrix, cellcolors=mx, border=NA, xlab=NA, ylab=NA, axes=FALSE)
+    matrix_colors <- apply(sorted_stability_matrix, 1:2, function(x) color_map[as.integer((x-mi)*511/(ma-mi))+1])
+    color2D.matplot(sorted_stability_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
     axis(3, at=0.5:(ncol-0.5), labels=1:ncol)
     
   } else {
