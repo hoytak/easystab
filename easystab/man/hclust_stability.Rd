@@ -15,6 +15,8 @@ hclust_stability(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average")
 \arguments{
   \item{dx}{Distance matrix as produced by \code{dists}, giving
     the point-to-point distances.}
+
+  \item{hc}{Hierarchical clustering as produced by \code{hclust}.}
   
   \item{clsnum_min}{Minimum cluster number (default 2).}
   

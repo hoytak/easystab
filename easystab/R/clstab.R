@@ -94,6 +94,8 @@ kmeans_stability <- function(x, kmeans_output_list) {
 }
 
 hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average"){
+  dx <- as.matrix(dx)
+  
   n <- nrow(dx)
   
   if(n<clsnum_max){
@@ -113,6 +115,7 @@ hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "
     }
     clusterings[[length(clusterings)+1]] <- list(dists = t(dist_matrix), labels = labels)
   }
+  
   clusterings
 }
 
