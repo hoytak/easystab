@@ -94,6 +94,9 @@ hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "
     warning("only average and median methods are supported")
     return(NA);
   }
+
+  dx <- as.matrix(dx)
+  
   n <- nrow(dx)
   
   if(n<clsnum_max){
@@ -113,6 +116,7 @@ hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "
     }
     clusterings[[length(clusterings)+1]] <- list(dists = t(dist_matrix), labels = labels)
   }
+  
   clusterings
 }
 
@@ -176,7 +180,7 @@ plotStabilityMap <- function(clustering, with_label = FALSE, classes = NULL, cla
     if(is.null(classes)){
       labels <- clustering$labels
     }else{
-      labels <- classes
+      labels <- as.integer(classes)
     }
     
     index_map <- clustering$sorted_stability_matrix_index_map

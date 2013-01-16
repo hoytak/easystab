@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
-#include <omp.h>
 #include <cmath>
 #include <iostream>
 
@@ -287,26 +286,13 @@ static inline void fill_baseline_matrix(Array& dest, const double *src,
 template <typename Array>
 void calculateScores(double * scores, const Array& src, size_t n, size_t K, size_t seed, 
 		     size_t n_baselines, double beta, bool use_permutations, bool by_dimension) {
-
-  
-  //const size_t n_threads = omp_get_max_threads();
-  const size_t n_threads = 1;
-
-  vector<vector<double> > data_buffers(n_threads);
-  vector<vector<double> > stab_buffers(n_threads);
-  vector<Buffers> buffers(n_threads, Buffers(K));
-
-  typedef vector<vector<double> >::iterator buf_iter;
-
-  for(buf_iter it = data_buffers.begin(); it != data_buffers.end(); ++it)
-    it->resize(n*K);
-
-  for(buf_iter it = stab_buffers.begin(); it != stab_buffers.end(); ++it)
-    it->resize(n*K);
+  vector<double> data_buffer(n*K);
+  vector<double> stab_buffer(n*K);
+  Buffers buffer(K);
 
   // Get the first one
-  _calc_stability_matrix(stab_buffers[0], src, n, K, beta, buffers[0]);
-  const double dist_score = log_score(stab_buffers[0], n, K);
+  _calc_stability_matrix(stab_buffer, src, n, K, beta, buffer);
+  const double dist_score = log_score(stab_buffer, n, K);
 
   // Set up the rest of the baselines
   CheapRNG uniform_int(seed);
@@ -315,15 +301,11 @@ void calculateScores(double * scores, const Array& src, size_t n, size_t K, size
 
   generate(seeds.begin(), seeds.end(), uniform_int);
 
-  //#pragma omp parallel for shared(data_buffers, stab_buffers, seeds, buffers, scores, src, beta, n, K) 
   for(size_t i = 0; i < n_baselines; ++i) {
     
-    //size_t nt = omp_get_thread_num();
-    size_t nt = 0;
-
-    fill_baseline_matrix(data_buffers[nt], src, n, K, seeds[i], use_permutations, by_dimension);
-    _calc_stability_matrix(stab_buffers[nt], data_buffers[nt], n, K, beta, buffers[nt]);
-    scores[i] = dist_score - log_score(stab_buffers[nt], n, K);
+    fill_baseline_matrix(data_buffer, src, n, K, seeds[i], use_permutations, by_dimension);
+    _calc_stability_matrix(stab_buffer, data_buffer, n, K, beta, buffer);
+    scores[i] = dist_score - log_score(stab_buffer, n, K);
   }
 }
 
@@ -350,7 +332,6 @@ static inline double calculateSilhouette(double *silhouettes,  double *silhouett
 
   double silhouette_total = 0;
 
-  //#pragma omp parallel for reduction(+:silhouette_total)
   for(size_t i = 0; i < n; ++i) {
     
     size_t second_min_index = (labels[i] == 0) ? 1 : 0;
