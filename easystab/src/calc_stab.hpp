@@ -289,7 +289,8 @@ void calculateScores(double * scores, const Array& src, size_t n, size_t K, size
 		     size_t n_baselines, double beta, bool use_permutations, bool by_dimension) {
 
   
-  const size_t n_threads = omp_get_max_threads();
+  //const size_t n_threads = omp_get_max_threads();
+  const size_t n_threads = 1;
 
   vector<vector<double> > data_buffers(n_threads);
   vector<vector<double> > stab_buffers(n_threads);
@@ -314,10 +315,11 @@ void calculateScores(double * scores, const Array& src, size_t n, size_t K, size
 
   generate(seeds.begin(), seeds.end(), uniform_int);
 
-#pragma omp parallel for shared(data_buffers, stab_buffers, seeds, buffers, scores, src, beta, n, K) 
+  //#pragma omp parallel for shared(data_buffers, stab_buffers, seeds, buffers, scores, src, beta, n, K) 
   for(size_t i = 0; i < n_baselines; ++i) {
     
-    size_t nt = omp_get_thread_num();
+    //size_t nt = omp_get_thread_num();
+    size_t nt = 0;
 
     fill_baseline_matrix(data_buffers[nt], src, n, K, seeds[i], use_permutations, by_dimension);
     _calc_stability_matrix(stab_buffers[nt], data_buffers[nt], n, K, beta, buffers[nt]);
@@ -348,7 +350,7 @@ static inline double calculateSilhouette(double *silhouettes,  double *silhouett
 
   double silhouette_total = 0;
 
-#pragma omp parallel for reduction(+:silhouette_total)
+  //#pragma omp parallel for reduction(+:silhouette_total)
   for(size_t i = 0; i < n; ++i) {
     
     size_t second_min_index = (labels[i] == 0) ? 1 : 0;

@@ -14,7 +14,7 @@ public:
   {}
 
   size_t operator()() {
-    state = 6364136223846793005ul * state + 1442695040888963407ull;
+    state = 6364136223846793005ull * state + 1442695040888963407ull;
     return (uint32_t)( (state >> 32) ^ state);
   }
 
