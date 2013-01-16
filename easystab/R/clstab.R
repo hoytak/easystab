@@ -22,6 +22,11 @@ make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_l
 }
 
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_mode = 0, theta = NULL){
+  if(seed < 0){
+    warning("seed cannot be negative. your input is ", seed)
+    return(NA)
+  }
+  
   is_list <- TRUE
   if(! is.null(names(clusterings))){
     tp_clustering <- clusterings
@@ -40,6 +45,10 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
     l <- clusterings[[idx]]
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
+    if(is.null(X)){
+      warning("clustering ", idx, " does not have point to centroid distance matrix\n")
+      return(NA)
+    }
     d <- dim(X)
     .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
     l$stability <- mean(scores)
@@ -67,20 +76,6 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
   }
 }
 
-gen_kmeans_clusterings <- function(clustering_size = 9){
-  require(fields)
-  x <- rbind(matrix(rnorm(100, sd = 0.3), ncol = 2),
-        matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2))
-  clusterings <- list()
-  for(i in 2:(clustering_size+1)){
-     cl <- kmeans(x, i)
-     cl$labels <- cl$cluster
-     cl$dists <- rdist(x, cl$centers)
-     clusterings[[length(clusterings)+1]] <- cl
-  }
-  clusterings
-}
-
 kmeans_stability <- function(x, kmeans_output_list) {
 
   clusterings <- list()
@@ -94,6 +89,11 @@ kmeans_stability <- function(x, kmeans_output_list) {
 }
 
 hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average"){
+
+  if(method!= "average" & method != ""){
+    warning("only average and median methods are supported")
+    return(NA);
+  }
   n <- nrow(dx)
   
   if(n<clsnum_max){
