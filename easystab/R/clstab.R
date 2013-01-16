@@ -179,7 +179,7 @@ plotStabilityMap <- function(clustering, with_label = FALSE, classes = NULL, cla
     if(is.null(classes)){
       labels <- clustering$labels
     }else{
-      labels <- classes
+      labels <- as.integer(classes)
     }
     
     index_map <- clustering$sorted_stability_matrix_index_map
