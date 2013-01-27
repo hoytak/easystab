@@ -368,12 +368,7 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 			  double *centroids,  size_t K, // centroids is a K x 2 matrix
 			  double beta, double *xvec, double *yvec)
 {
-  /*printf("centroids\n");
-  for(int i = 0; i<K; i++){
-    printf("%f, %f\n", centroids[i*2+0], centroids[i*2+1]);
-  }
-  */
-  if(K == 0) {
+  if(K == 0 || K == 1) {
     fill(stab_image, stab_image + image_nx*image_ny, 0);
     return;
   }
@@ -405,14 +400,21 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 
   double *X = new double[image_ny * image_nx * K];
 
-  double vx      = (image_x_upper - image_x_lower) / (image_nx - 1);
-  double start_x = image_x_lower;
+  // do the calculation at the center of every pixel, not a corner.
+  double vx      = (image_x_upper - image_x_lower) / (image_nx);
+  double start_x = image_x_lower + vx / 2;
     
-  double vy      = (image_y_upper - image_y_lower) / (image_ny - 1);
-  double start_y = image_y_lower;
+  double vy      = (image_y_upper - image_y_lower) / (image_ny);
+  double start_y = image_y_lower + vy / 2;
+
+  for(size_t k = 0; k < K; ++k) {
+    cout << (k+1) << ": (" << centroids[2*k] << ", " 
+	 << centroids[2*k + 1] << ")" << endl;
+  }
 
   for(size_t yi = 0; yi < image_ny; ++yi) {
     for(size_t xi = 0; xi < image_nx; ++xi) {
+
       double x = start_x + vx * xi;
       double y = start_y + vy * yi;
 
@@ -433,8 +435,16 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 
   _calc_stability_matrix(stab_matrix, X, image_nx*image_ny, K, beta, buffer);
 
-  for(size_t i = 0; i < image_nx * image_ny; ++i)
-    stab_image[i] = *max_element(stab_matrix + i*K, stab_matrix + (i+1)*K);
+  for(size_t xi = 0; xi < image_nx; ++xi) {
+    for(size_t yi = 0; yi < image_ny; ++yi) {
+    
+      size_t idx_stab = (yi * image_nx + xi);
+      size_t idx_img = ( ((image_ny - 1) - yi) * image_nx + xi);
+
+      stab_image[idx_img] = *max_element(stab_matrix + idx_stab*K, 
+					 stab_matrix + (idx_stab+1)*K);
+    }
+  }
 
   delete[] stab_matrix;
   delete[] X;
