@@ -84,6 +84,14 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
 
 kmeans_stability <- function(x, kmeans_output_list) {
 
+  is_list <- TRUE
+  if(! is.null(names(kmeans_output_list))){
+    tp_clustering <- kmeans_output_list
+    kmeans_output_list <- list()
+    kmeans_output_list[[1]] <- tp_clustering
+    is_list <- FALSE
+  }
+  
   clusterings <- list()
   for(cl in kmeans_output_list) {
     cl$labels <- cl$cluster
@@ -91,7 +99,11 @@ kmeans_stability <- function(x, kmeans_output_list) {
     clusterings[[length(clusterings)+1]] <- cl
   }
 
-  clusterings
+  if(is_list){
+    return(clusterings)
+  }else{
+    return(clusterings[[1]])
+  }
 }
 
 hclust_stability <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
