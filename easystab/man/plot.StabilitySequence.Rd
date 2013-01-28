@@ -1,6 +1,6 @@
-\name{plotStabilitySequence}
+\name{plot.StabilitySequence}
 
-\alias{plotStabilitySequence}
+\alias{plot.StabilitySequence}
 
 \title{Plot the stability scores produced by perturbationStability as a
   sequence of box plots.}
@@ -10,7 +10,7 @@
   sequence of box plots.}
 
 \usage{
-\code{plotStablilitySequence(clusterings)}
+\code{plot.StablilitySequence(clusterings)}
 }
 \arguments{
   \item{clusterings}{The output of
