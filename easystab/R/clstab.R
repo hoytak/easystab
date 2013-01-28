@@ -18,6 +18,7 @@ make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_l
   xvec <- rep(as.numeric(NA), times = as.integer(image_nx))
   yvec <- rep(as.numeric(NA), times = as.integer(image_ny))
   .Call('_make_stability_image', stab_image, as.integer(image_nx), as.integer(image_ny), image_x_lower, image_x_upper, image_y_lower, image_y_upper, t(centroids), nrow(centroids), theta, xvec, yvec)
+  
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
@@ -54,7 +55,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores <- scores
-    
+        
     Z <- -matrix(1, ncol = d[1], nrow = d[2])
     index_map <- rep(as.integer(NA), times=d[1])
     K_map <- rep(as.integer(NA), d[2])
@@ -66,9 +67,14 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
     l$sorted_stability_matrix_index_map <- index_map
     l$sorted_stability_matrix_cluster_map <- K_map
     l$theta <- opt_theta
+
+    class(l) <- "stabilityreport"
+
     clusterings[[idx]] <- l
   }
 
+  class(clusterings) <- "stabilityreportlist"
+  
   if(is_list){
     return(clusterings)
   }else{
