@@ -8,8 +8,8 @@ for(k in 1:10) {
   km_list[[k]] = kmeans(X, k)
 }
 
-stab_list <- perturbationStability(kmeans_stability(X, km_list))
+stability_sequence <- perturbationStability(kmeans_stability(X, km_list))
 
-plotStabilitySequence(stab_list)
+plot(stability_sequence)
 
-plotStabilityMap(stab_list[[3]], with_label = TRUE, classes = iris[,"Species"])
+plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])

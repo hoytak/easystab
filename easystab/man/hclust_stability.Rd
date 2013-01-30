@@ -9,7 +9,7 @@
   behavior of the hierarchical clustering tree. }
 
 \usage{
-hclust_stability(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average")
+hclust_stability(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average")
 }
 
 \arguments{
@@ -18,7 +18,7 @@ hclust_stability(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average")
 
   \item{hc}{Hierarchical clustering as produced by \code{hclust}.}
   
-  \item{clsnum_min}{Minimum cluster number (default 2).}
+  \item{clsnum_min}{Minimum cluster number (default 1).}
   
   \item{clsnum_max}{Maximum cluster number (default 10).}
   

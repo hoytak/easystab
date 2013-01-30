@@ -18,10 +18,16 @@ make_stability_image <- function(centroids, theta, image_nx, image_ny, image_x_l
   xvec <- rep(as.numeric(NA), times = as.integer(image_nx))
   yvec <- rep(as.numeric(NA), times = as.integer(image_ny))
   .Call('_make_stability_image', stab_image, as.integer(image_nx), as.integer(image_ny), image_x_lower, image_x_upper, image_y_lower, image_y_upper, t(centroids), nrow(centroids), theta, xvec, yvec)
+  
   list(stab_image = t(stab_image), xvec = xvec, yvec = yvec)
 }
 
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_mode = 0, theta = NULL){
+  if(seed < 0){
+    warning("seed cannot be negative. your input is ", seed)
+    return(NA)
+  }
+  
   is_list <- TRUE
   if(! is.null(names(clusterings))){
     tp_clustering <- clusterings
@@ -40,12 +46,16 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
     l <- clusterings[[idx]]
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
+    if(is.null(X)){
+      warning("clustering ", idx, " does not have point to centroid distance matrix\n")
+      return(NA)
+    }
     d <- dim(X)
     .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores <- scores
-    
+        
     Z <- -matrix(1, ncol = d[1], nrow = d[2])
     index_map <- rep(as.integer(NA), times=d[1])
     K_map <- rep(as.integer(NA), d[2])
@@ -57,28 +67,19 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
     l$sorted_stability_matrix_index_map <- index_map
     l$sorted_stability_matrix_cluster_map <- K_map
     l$theta <- opt_theta
+
+    class(l) <- "StabilityReport"
+
     clusterings[[idx]] <- l
   }
 
+  class(clusterings) <- "StabilitySequence"
+  
   if(is_list){
     return(clusterings)
   }else{
     return(clusterings[[1]])
   }
-}
-
-gen_kmeans_clusterings <- function(clustering_size = 9){
-  require(fields)
-  x <- rbind(matrix(rnorm(100, sd = 0.3), ncol = 2),
-        matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2))
-  clusterings <- list()
-  for(i in 2:(clustering_size+1)){
-     cl <- kmeans(x, i)
-     cl$labels <- cl$cluster
-     cl$dists <- rdist(x, cl$centers)
-     clusterings[[length(clusterings)+1]] <- cl
-  }
-  clusterings
 }
 
 kmeans_stability <- function(x, kmeans_output_list) {
@@ -105,7 +106,13 @@ kmeans_stability <- function(x, kmeans_output_list) {
   }
 }
 
-hclust_stability <- function(dx, hc, clsnum_min = 2, clsnum_max = 10, method = "average"){
+hclust_stability <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
+
+  if(method!= "average" & method != ""){
+    warning("only average and median methods are supported")
+    return(NA);
+  }
+
   dx <- as.matrix(dx)
   
   n <- nrow(dx)
@@ -151,10 +158,27 @@ estimateK <- function(clusterings, p_value = 0.05){
    estimated_K <- dim(clusterings[[e_idx]]$dists)[2]
    estimated_index <- e_idx
   }
+  
   list(estimated_K = estimated_K, estimated_index = estimated_index)
 }
 
-plotStabilitySequence <- function(clusterings){
+print.StabilitySequence <- function(clusterings) {
+
+  cat(sprintf("Perturbation Stability Sequence:\n"))
+  cat(sprintf("  %d clusterings. \n", length(clusterings)))
+
+  # Need more stuff in here...
+}
+
+summary.StabilitySequence <- function(clusterings) {
+
+  cat(sprintf("Perturbation Stability Sequence:\n"))
+  cat(sprintf("  %d clusterings. \n", length(clusterings)))
+
+  # Need more stuff in here; basically everything
+}
+
+plot.StabilitySequence <- function(clusterings){
   get_scores <- function(l) l$scores
   get_K <- function(l) dim(l$dists)[2]
   score_list <- lapply(clusterings, get_scores)
@@ -163,7 +187,31 @@ plotStabilitySequence <- function(clusterings){
   boxplot(score_list)
 }
 
-plotStabilityMap <- function(clustering, with_label = FALSE, classes = NULL, class_colors = NULL){
+print.StabilityReport <- function(clustering) {
+
+  cat(sprintf("Perturbation Stability Report:\n"))
+  cat(sprintf("  %d data points grouped into %d clusters.\n",
+              dim(clustering$sorted_stability_matrix)[1], dim(clustering$K)))
+  cat(sprintf("  Stability score = %f; 95%% confidence interval = [%f, %f].",
+              clustering$stability,
+              clustering$stability_quantiles[[1]],
+              clustering$stability_quantiles[[4]]))
+}
+
+summary.StabilityReport <- function(clustering) {
+
+  cat(sprintf("Perturbation Stability Summary:\n"))
+  cat(sprintf("  %d data points grouped into %d clusters.\n",
+              dim(clustering$sorted_stability_matrix)[1], dim(clustering$K)))
+  cat(sprintf("  Stability score = %f; 95%% confidence interval = [%f, %f].",
+              clustering$stability,
+              clustering$stability_quantiles[[1]],
+              clustering$stability_quantiles[[4]]))
+
+  # Need more stuff in here; stability of each cluster for example...
+}
+
+plot.StabilityReport <- function(clustering, with_label = FALSE, classes = NULL, class_colors = NULL){
   
   require(grDevices)
   require(plotrix)

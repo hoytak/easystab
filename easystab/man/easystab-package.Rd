@@ -28,11 +28,52 @@
 }
 
 \examples{
+
+## example with built in sample data
+## clusterings in sample data already have 'dist' matrix included
+
 library(easystab)
+
 data(sample)
 pl<-perturbationStability(clusterings)
 res<-estimateK(pl)
+
 l<-pl[[res$estimated_index]]
+
 plotStabilitySequence(pl)
-plotStablilityMap(l)
+plotStabililityMap(l)
+
+## example with hclust function on iris data set
+
+library(easystab)
+
+X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+
+
+dx <- dist(scale(X))
+hc <- hclust(dx)
+cl_list <- hclust_stability(dx, hc)
+
+stab_list <- perturbationStability(cl_list)
+
+plotStabilitySequence(stab_list)
+
+## example with kmeans function on iris data set
+
+library(easystab)
+
+X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+
+km_list = list()
+
+for(k in 1:10) {
+  km_list[[k]] = kmeans(X, k)
+}
+
+stab_list <- perturbationStability(kmeans_stability(X, km_list))
+
+plotStabilitySequence(stab_list)
+
+plotStabilityMap(stab_list[[3]], with_label = TRUE, classes = iris[,"Species"])
+
 }

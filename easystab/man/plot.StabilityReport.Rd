@@ -1,8 +1,8 @@
-\name{plotStabilityMap}
+\name{plot.StabilityReport}
 
-\alias{plotStabilityMap}
+\alias{plot.StabilityReport}
 
-\title{Represent the stability of a clustering as a heat map plot.}
+\title{Plots the stability report of a clustering as a heat map plot.}
 
 \description{Plots the stability of a clustering as a heat map plot,
   showing the relative stability of the different clusters and the
@@ -15,7 +15,7 @@
 }
 
 \usage{
-plotStabilityMap(clustering, with_label = FALSE, classes = NULL, class_colors = NULL)
+plot.StabilityReport(clustering, with_label = FALSE, classes = NULL, class_colors = NULL)
 }
 \arguments{
   \item{clustering}{A clustering with stability analysis results
