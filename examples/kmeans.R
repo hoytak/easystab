@@ -11,5 +11,4 @@ for(k in 1:10) {
 stability_sequence <- perturbationStability(kmeans_stability(X, km_list))
 
 plot(stability_sequence)
-
-plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])
+# plot(stability_sequence[[5]], with_label = TRUE, classes = iris[,"Species"])

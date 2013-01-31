@@ -15,6 +15,4 @@ summary(stability_sequence)
 
 plot(stability_sequence)
 
-K_est <- estimateK(stability_sequence)$estimated_K
-
-plot(stability_sequence[[K_est]], with_label = TRUE, classes = iris[,"Species"])
+# plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])
