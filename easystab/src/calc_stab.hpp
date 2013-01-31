@@ -409,16 +409,6 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
   double vy      = (image_y_upper - image_y_lower) / (image_ny);
   double start_y = image_y_lower + vy / 2;
 
-  // for(size_t k = 0; k < K; ++k) {
-  //   cout << (k+1) << ": (" << centroids[2*k] << ", " 
-  // 	 << centroids[2*k + 1] << ")" << endl;
-  // }
-
-  // cout << "image_x_lower = " << image_x_lower << "; "
-  //      << "image_x_upper = " << image_x_upper << "; "
-  //      << "image_y_lower = " << image_y_lower << "; "
-  //      << "image_y_upper = " << image_y_upper << "; " << endl;
-
   double *X = new double[K];
   double *s = new double[K];
   Buffers buffer(K);
@@ -431,24 +421,11 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 
   for(size_t yi = 0; yi < image_ny; ++yi) {
     for(size_t xi = 0; xi < image_nx; ++xi) {
-
-      // cout << "at (" << x << "," << y << "); d = (";
       
-      for(size_t k = 0; k < K; ++k) {
-	// double d = sqrt( sqr(xvec[xi] - centroids[2*k + 0]) + sqr(yvec[yi] - centroids[2*k + 1]));
-	// cout << d << ", ";
-
+      for(size_t k = 0; k < K; ++k)
 	X[k] = sqrt( sqr(xvec[xi] - centroids[2*k + 0]) + sqr(yvec[yi] - centroids[2*k + 1]));
-      }
-
-      // cout << "): stab = ";
 
       _calc_stability_matrix(s, X, 1, K, beta, buffer);
-
-      // for(size_t k = 0; k < K; ++k)
-      // 	cout << s[k] << ", ";
-
-      // size_t idx_img = ( ((image_ny - 1) - yi) * image_nx + xi);
 
       stab_image[yi*image_nx + xi] = *max_element(s, s + K);
     }
