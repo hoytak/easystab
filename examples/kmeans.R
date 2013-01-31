@@ -1,6 +1,6 @@
 library(easystab)
 
-X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
 km_list = list()
 
@@ -12,4 +12,4 @@ stability_sequence <- perturbationStability(kmeans_stability(X, km_list))
 
 plot(stability_sequence)
 
-plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])
+## plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])

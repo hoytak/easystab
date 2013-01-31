@@ -143,7 +143,8 @@ extern "C" SEXP _calculateRepresentativeDistances(SEXP _rep_distances, SEXP _lab
   size_t K = INTEGER(_K)[0];
   double *src_dists = REAL(_src_dists);
 
-  int * labels = INTEGER(_labels);
+  int * labels = new int[n];
+
   for (int i = 0; i<n; i++)
     labels[i] = INTEGER(_labels)[i]-1;
 

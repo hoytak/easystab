@@ -108,7 +108,7 @@ kmeans_stability <- function(x, kmeans_output_list) {
 
 hclust_stability <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
 
-  if(method!= "average" & method != ""){
+  if(method != "average" & method != "median"){
     warning("only average and median methods are supported")
     return(NA);
   }

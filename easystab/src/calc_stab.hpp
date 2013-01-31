@@ -31,7 +31,7 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
 			    size_t n, size_t K, double beta, 
 			    Buffers& buffer) {
 
-  const double eps = 1e-8;
+  const double eps = 1e-32;
 
   for(size_t i = 0; i < n; ++i) {
     vector<IdxPair>& d = buffer.d;
@@ -84,7 +84,7 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
     for(size_t k = 1; k < K; ++k)  {
       B[k] = B[k-1] + 1. / (d[k].value + eps);
       C[k] = k - d[k].value * B[k-1];
-      D[k] = exp(-exp(beta)*C[k]);
+      D[k] = exp(exp(-beta)*C[k]);
       G[k] = D[k] / B[k];
     }
 
@@ -368,8 +368,11 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 			  double *centroids,  size_t K, // centroids is a K x 2 matrix
 			  double beta, double *xvec, double *yvec)
 {
-  if(K == 0 || K == 1) {
+  if(K == 0) {
     fill(stab_image, stab_image + image_nx*image_ny, 0);
+    return;
+  } else if(K == 1) {
+    fill(stab_image, stab_image + image_nx*image_ny, 1);
     return;
   }
 
@@ -398,7 +401,6 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
     image_y_upper += buffer_y;
   }
 
-  double *X = new double[image_ny * image_nx * K];
 
   // do the calculation at the center of every pixel, not a corner.
   double vx      = (image_x_upper - image_x_lower) / (image_nx);
@@ -407,46 +409,52 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
   double vy      = (image_y_upper - image_y_lower) / (image_ny);
   double start_y = image_y_lower + vy / 2;
 
-  for(size_t k = 0; k < K; ++k) {
-    cout << (k+1) << ": (" << centroids[2*k] << ", " 
-	 << centroids[2*k + 1] << ")" << endl;
-  }
+  // for(size_t k = 0; k < K; ++k) {
+  //   cout << (k+1) << ": (" << centroids[2*k] << ", " 
+  // 	 << centroids[2*k + 1] << ")" << endl;
+  // }
+
+  // cout << "image_x_lower = " << image_x_lower << "; "
+  //      << "image_x_upper = " << image_x_upper << "; "
+  //      << "image_y_lower = " << image_y_lower << "; "
+  //      << "image_y_upper = " << image_y_upper << "; " << endl;
+
+  double *X = new double[K];
+  double *s = new double[K];
+  Buffers buffer(K);
+
+  for(size_t yi = 0; yi < image_ny; ++yi)
+    yvec[yi] = start_y + vy * yi;
+
+  for(size_t xi = 0; xi < image_nx; ++xi) 
+    xvec[xi] = start_x + vx * xi;
 
   for(size_t yi = 0; yi < image_ny; ++yi) {
     for(size_t xi = 0; xi < image_nx; ++xi) {
 
-      double x = start_x + vx * xi;
-      double y = start_y + vy * yi;
+      // cout << "at (" << x << "," << y << "); d = (";
+      
+      for(size_t k = 0; k < K; ++k) {
+	// double d = sqrt( sqr(xvec[xi] - centroids[2*k + 0]) + sqr(yvec[yi] - centroids[2*k + 1]));
+	// cout << d << ", ";
 
-      if(yi == 0)
-	xvec[xi] = x;
-      if(xi == 0)
-	yvec[yi] = y;
+	X[k] = sqrt( sqr(xvec[xi] - centroids[2*k + 0]) + sqr(yvec[yi] - centroids[2*k + 1]));
+      }
 
-      for(size_t k = 0; k < K; ++k)
-	X[yi * (image_nx*K) + xi*K + k] 
-	  = sqrt( sqr(x - centroids[2*k + 0]) + sqr(y - centroids[2*k + 1]));
+      // cout << "): stab = ";
+
+      _calc_stability_matrix(s, X, 1, K, beta, buffer);
+
+      // for(size_t k = 0; k < K; ++k)
+      // 	cout << s[k] << ", ";
+
+      // size_t idx_img = ( ((image_ny - 1) - yi) * image_nx + xi);
+
+      stab_image[yi*image_nx + xi] = *max_element(s, s + K);
     }
   }
 
-  Buffers buffer(K);
-
-  double *stab_matrix = new double[image_ny * image_nx * K];  
-
-  _calc_stability_matrix(stab_matrix, X, image_nx*image_ny, K, beta, buffer);
-
-  for(size_t xi = 0; xi < image_nx; ++xi) {
-    for(size_t yi = 0; yi < image_ny; ++yi) {
-    
-      size_t idx_stab = (yi * image_nx + xi);
-      size_t idx_img = ( ((image_ny - 1) - yi) * image_nx + xi);
-
-      stab_image[idx_img] = *max_element(stab_matrix + idx_stab*K, 
-					 stab_matrix + (idx_stab+1)*K);
-    }
-  }
-
-  delete[] stab_matrix;
+  delete[] s;
   delete[] X;
 }
 
