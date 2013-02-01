@@ -38,8 +38,6 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, Kmap_
   require(graphics)
   opt_theta <- theta
   if(is.null(theta)){
-#    res <- optimize(f_theta, interval = c(-8, 8), tol = 0.00001, clusterings = clusterings, n_baselines = n_baselines)
-#    opt_theta <- res$minimum
     opt_theta <- getOptTheta(clusterings, seed = seed, n_baselines = n_baselines)
   }
   for( idx in 1:length(clusterings)){
@@ -270,17 +268,10 @@ plotStabilityImage <- function(centroids, theta, image_nx, image_ny, image_x_low
   require(grDevices)
   require(plotrix)
   color2D.matplot(res$stab_image[nrow(res$stab_image):1,], border=NA, xlab=NA, ylab=NA, axes=FALSE)
-  #color2D.matplot(res$stab_image, border=NA, xlab=NA, ylab=NA, axes=FALSE)
   xlen <- length(res$xvec)
   ylen <- length(res$yvec)
   xarr <- c(1, as.integer((xlen+1)/4), as.integer((xlen+1)/2), as.integer((xlen+1)*3/4), xlen)
   yarr <- c(1, as.integer((ylen+1)/4), as.integer((ylen+1)/2), as.integer((ylen+1)*3/4), ylen)
   axis(1, at=xarr+0.5, labels=res$xvec[xarr])
   axis(2, at=yarr+0.5, labels=res$yvec[yarr])
-}
-
-plotStabilityImage1 <- function(centroids, theta, image_nx, image_ny, image_x_lower = 0, image_x_upper = 0, image_y_lower = 0, image_y_upper = 0){
-  res <- stab_image <- make_stability_image(centroids, theta, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper)
-  require(graphics)
-  image(res$xvec, res$yvec, res$stab_image[nrow(res$stab_image):1,])
 }
