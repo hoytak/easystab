@@ -22,7 +22,7 @@ to clustering matrix \code{dists} and array of \code{n} integer labels
   matrices to use in computing the stability scores.  Increase this
   number to get more accuracy 
 
-  \item{seed}{seed} The random seed used for calculating the baseline
+  \item{seed}{seed} The random seed used for sampling the baseline
   matrices.
 
   \item{Kmap_mode}{Kmap_mode} Determines how the clusters in the cluster
@@ -47,3 +47,4 @@ to clustering matrix \code{dists} and array of \code{n} integer labels
   the sorted stability matrix used for plotting the behavior of the
   clustering.
 }
+

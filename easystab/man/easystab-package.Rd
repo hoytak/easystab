@@ -13,20 +13,34 @@
   Functions are given to: assess the behavior of a clustering under
   perturbations, estimate the correct number of clusters in a dataset,
   assess the relative stability of individual clusters within a
-  dataset, and interface with \code{hclust} and \code{kmeans}. }
+  dataset, and interface with the \code{hclust} and \code{kmeans}
+  clustering packages.
+
+  The exact method used is to perturb the cluster-to-point distances by
+  scaling them with a shifted exponential random variable, then
+  computing the probabilities of membership for each of the points under
+  this perturbation.  This is compared against a set of randomly sampled
+  bootstrapped baselines to determine the final stability score.
+
+  Two 
+  
+}
 
 \usage{
-# Calculate perturbation stability of a list of clusterings
-perturbationStability(clusterings, n_baselines = 32, seed = 0,
-Kmap_mode = 0, theta = NULL)
+## Calculate perturbation stability of a list of clusterings
 
-# plot and summary of the stability report of a clustering as a heat map plot
+perturbationStability(clusterings, n_baselines = 32, seed = 0, Kmap_mode = 0, theta = NULL)
+
+## Plot and summary of the stability report of a clustering as a heat
+##  map plot.
+
 plot(clustering, with_label = FALSE, classes = NULL, class_colors = NULL)
 print(clustering)
 summary(clustering)
 
-# plot and summary of the stability scores produced by perturbationStability as a
-  sequence of box plots
+## Plot and summary of the stability scores produced by
+## perturbationStability as a sequence of box plots
+
 plot(clusterings)
 print(clusterings)
 summary(clusterings)
@@ -87,8 +101,6 @@ plot(l)
 
 ## example with hclust function on iris data set
 
-library(easystab)
-
 X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
 
 dx <- dist(scale(X))
@@ -102,8 +114,6 @@ print(stability_sequence)
 summary(stability_sequence)
 
 ## example with kmeans function on iris data set
-
-library(easystab)
 
 X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
 
