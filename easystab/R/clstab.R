@@ -6,6 +6,7 @@ _processListOfClusterings <- function(clusterings) {
   ## clusterings or a single clustering.
 
   if(! is.null(clusterings$dists)) {
+
     is_list <- FALSE
 
     clusterings$dists <- as.matrix(clusterings$dists)
@@ -14,33 +15,50 @@ _processListOfClusterings <- function(clusterings) {
       warning("'labels' attribute in clusterings not supplied; defaulting to minimum distance.")
       clusterings$labels <- apply(clusterings$dists, 1, which.min)
     }
+
+    n_points <- nrow(clusterings$dists)
+    
   } else {
+
     is_list <- TRUE
-    
-    gave_warning <- FALSE
-    
+    gave_label_warning <- FALSE
+    n_points <- NULL
+        
     for(i in 1:length(clusterings)) {
-      if(is.null(clusterings[[i]]$dists)) {
+
+      X <- clusterings[[i]]$dists
+      
+      if(is.null(X)) {
         stop(sprintf("'dists' attribute not present in clustering component %d", i))
       }
 
-      clusterings[[i]]$dists <- as.matrix(clusterings[[i]]$dists)
+      if(is.null(n_points))
+        n_points <- nrow(X)
+      else {
+        if(n_points != nrow(X)) {
+          stop("Inconsistent number of data points in list of clusterings!")
+        }
+      }
+      
+      clusterings[[i]]$dists <- as.matrix(X)
       
       if(is.null(clusterings[[i]]$labels)) {
-        if(!gave_warning) {
+        if(!gave_label_warning) {
           warning("'labels' attribute not supplied in all clusterings; defaulting to minimum distance.")
-          gave_warning <- TRUE
+          gave_label_warning <- TRUE
         }
         
         clusterings$labels <- apply(clusterings[[i]]$dists, 1, which.min)
       }
+      
     }
   }
-  list(is_list <- is_list, clusterings <- clusterings)
+  list(is_list <- is_list,
+       clusterings <- clusterings,
+       n_points <- n_points)
 }
 
-
-f_theta <- function(t, clusterings, seed = 0, n_baselines = 32){
+f_theta <- function(t, clusterings, seed, n_baselines){
   score_total <- 0
   for(l in clusterings){
     X <- l$dists
@@ -53,10 +71,7 @@ f_theta <- function(t, clusterings, seed = 0, n_baselines = 32){
 
 #'Calculates the optimal prior parameter
 #'
-#'Calculate the optimal prior parameter theta by maximizing the difference in
-#'overall stability aganst the baseline distributions. The theta parameter
-#'indexes the strength of the perturbations, with smaller values translating
-#'into stronger perturbations.
+#'Calculate the optimal prior parameter theta by maximizing the difference in overall stability aganst the baseline distributions. The theta parameter indexes the strength of the perturbations, with smaller values translating into stronger perturbations.
 #'
 #'
 #'@param clusterings A single clustering or a list of clusterings. Each clustering of \code{n} data points into \code{K} clusters is specified primarily by matrix giving point to cluster distances.   Specifically, clustering must contain an of \code{n} by \code{K} distance matrix giving the point to cluster distance (\code{K} can be different across clusterings). Optionally, an array of \code{n} integer labels \code{labels} in \code{1,...,K} is expected; if not present, a warning is given and the labels are computed according to the minimum point-to-cluster distance.
@@ -66,10 +81,8 @@ f_theta <- function(t, clusterings, seed = 0, n_baselines = 32){
 #'@param n_baselines The number of random baseline matrices to use in computing the stability scores.  Increase this number to get more accuracy at the expense of speed.
 #'
 #'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}}
-
-
 getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
-
+  
   clusterings <- _processListOfClusterings(clusterings)$clusterings
   
   res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001,
@@ -105,23 +118,20 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
     warning("seed cannot be negative. your input is ", seed)
     return(NA)
   }
-  
-  is_list <- TRUE
-  if(! is.null(names(clusterings))){
-    tp_clustering <- clusterings
-    clusterings <- list()
-    clusterings[[1]] <- tp_clustering
-    is_list <- FALSE
-  }
-  
-  require(graphics)
-  opt_theta <- theta
+
+  cl_info <- _processListOfClusterings(clusterings)
+
+  clusterings <- cl_info$clusterings
+  is_list <- cl_info$is_list
+  n_points <- cl_info$n_points
   
   if(is.null(theta)){
-    opt_theta <- getOptTheta(clusterings, seed = seed, n_baselines = n_baselines)
+    res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001,
+                    clusterings = clusterings, seed = seed, n_baselines = n_baselines)
+    opt_theta <- res$minimum
+  } else {
+    opt_theta <- theta
   }
-
-  n_points <- NULL
 
   for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
@@ -133,15 +143,8 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
       return(NA)
     }
 
-    if(is.null(n_points))
-      n_points <- nrow(X)
-    else {
-      if(n_points != nrow(X)) {
-        warning("Inconsistent number of data points in list of clusterings!")
-      }
-    }
-
     d <- dim(X)
+
     .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
     
     l$K <- d[2]
@@ -188,7 +191,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
       }
     }
       
-      ## Get the most stable one.
+    ## Get the most stable one.
     get_stability <- function(l) l$stability
     stability_vector <- sapply(cl_K_list, get_stability)
     e_idx <- which.max(stability_vector)
@@ -211,7 +214,9 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
       l$sorted_stability_matrix_index_map <- as.vector(1:n_points)
       l$sorted_stability_matrix_cluster_map <- as.vector(rep(1, n_points))
       l$theta <- 0
-        
+
+      class(l) <- "StabilityReport"
+      
       clusterings$best <- l
       
     } else {
@@ -229,34 +234,42 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
           }
         }
       }
+      
       clusterings$estimated_K <- estimated_K
-      clusterings$estimated_index <- cl_K_list[[estimated_K]]$.original_index
-      clusterings$best <- cl_K_list[[estimated_K]]
+      clusterings$best.index  <- cl_K_list[[estimated_K]]$.original_index
+      clusterings$best        <- cl_K_list[[estimated_K]]
     }
+
+    clusterings$theta <- opt_theta
+    
     return(clusterings)
-  }else{
+    
+  } else {
+    
     return(clusterings[[1]])
+    
   }
 }
 
 
 
-#'Adapts a single clustering, or list of clusterings, from \code{kmeans} to one
-#'usable by \code{perturbationStability}.
+#'Adapts a single clustering, or list of clusterings, from \code{kmeans} to one usable by \code{perturbationStability}.
 #'
-#'Given a list of clusterings, each from \code{kmeans}, returns a corresponding
-#'list of clusterings suitable for input to \code{perturbationStability}.
+#'Given a clustering or list of clusterings, each from \code{kmeans}, returns a corresponding list of clusterings suitable for input to \code{perturbationStability}.
 #'
+#'@param X Matrix or data frame object containing the clustered data.  This is needed to compute the cluster to centroid distances.
 #'
-#'@param x Matrix or data frame object containing the clustered data.
-#'@param kmeans_output_list A list of clusterings, each being the output of the
+#'@param kmeans_output An output of kmeans objects, or list of such objects, each being the output of the
 #'kmeans function.
-#'@return A list of clusterings that can be used as imput to the
-#'\code{perturbationStability} function.
-#'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}},
-#'\code{\link{hclust_stability}}
-#'@examples
 #'
+#'@return A clustering or list of clusterings that can be used as input to the
+#'\code{perturbationStability} function.
+#'
+#'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}},
+#'\code{\link{from.hclust}}
+#'
+#'@examples
+#'############################################################
 #'## example with kmeans function on iris data set
 #'
 #'library(easystab)
@@ -269,14 +282,13 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
 #'  km_list[[k]] = kmeans(X, k)
 #'}
 #'
-#'stability_sequence <- perturbationStability(kmeans_stability(X, km_list))
+#'stability_sequence <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'# plots the sequence
 #'plot(stability_sequence)
 #'
-#'# plots the stability map
-#'plot(stability_sequence[[3]], with_label = TRUE, classes =
-#'iris[,"Species"])
+#'# plots the stability map of the 3 component case
+#'plot(stability_sequence[[3]], classes = iris[,"Species"])
 #'
 #'############################################################
 #'## Example with kmeans clustering on yeast data set
@@ -284,9 +296,8 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
 #'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data") 
 #'
 #'X <- yeast[,-c(1,10)]
-#'class_label <- as.numeric(yeast[,10])
 #'
-#'# Sphere the data -- gives better results with 
+#'# Sphere the data -- gives better results with the yeast data set
 #'X <- scale(X)
 #'s <- svd(t(X))
 #'X <- t(diag(1.0 / sqrt(s$d)) %*% t(s$u) %*% t(X))
@@ -296,39 +307,38 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
 #'  km_list[[k]] = kmeans(X, k, iter.max = 50, nstart=50)
 #'}
 #'
-#'stability_sequence <- perturbationStability(kmeans_stability(X, km_list)) 
+#'stability_sequence <- perturbationStability(from.kmeans(X, km_list)) 
 #'
 #'print(stability_sequence)
 #'
 #'plot(stability_sequence)
 #'
 #'############################################################
-#'## Example using kmeans_stability on a single clustering
+#'## Example using from.kmeans on a single clustering
 #'
 #'## Use X from previous yeast example
 #'
 #'## Works on a single clustering
 #'km_cl <- kmeans(X, 8, iter.max = 50, nstart=50)
-#'stability <- perturbationStability(kmeans_stability(X, km_cl))
+#'stability <- perturbationStability(from.kmeans(X, km_cl))
 #'
 #'## Plot the stability -- a single clustering, so displays it as a
 #'## stability map plot.
 #'
-#'plot(stability, with_label)
+#'plot(stability, classes=yeast[,10])
 #'
-#'
-kmeans_stability <- function(x, kmeans_output_list) {
+from.kmeans <- function(x, kmeans_output) {
 
   is_list <- TRUE
-  if(! is.null(names(kmeans_output_list))){
-    tp_clustering <- kmeans_output_list
-    kmeans_output_list <- list()
-    kmeans_output_list[[1]] <- tp_clustering
+  if(! is.null(names(kmeans_output))){
+    tp_clustering <- kmeans_output
+    kmeans_output <- list()
+    kmeans_output[[1]] <- tp_clustering
     is_list <- FALSE
   }
   
   clusterings <- list()
-  for(cl in kmeans_output_list) {
+  for(cl in kmeans_output) {
     cl$labels <- cl$cluster
     cl$dists <- rdist(x, cl$centers)
     clusterings[[length(clusterings)+1]] <- cl
@@ -342,7 +352,6 @@ kmeans_stability <- function(x, kmeans_output_list) {
 }
 
 
-
 #'Adapts the output of \code{hclust} for input into
 #'\code{perturbationStability}.
 #'
@@ -350,23 +359,51 @@ kmeans_stability <- function(x, kmeans_output_list) {
 #'to give more information about the behavior of the hierarchical clustering
 #'tree.
 #'
-#'
 #'@param dx Distance matrix as produced by \code{dists}, giving the
 #'point-to-point distances.
+#'
 #'@param hc Hierarchical clustering as produced by \code{hclust}.
+#'
 #'@param clsnum_min Minimum cluster number (default 1).
+#'
 #'@param clsnum_max Maximum cluster number (default 10).
+#'
 #'@param method Method used to calculate the point-to-cluster distances from
 #'the point-to-point distance matrix \code{dx} given.  Currently, the two
 #'supported methods are "average", which takes the average of the distances
 #'between the given point and all the points in the cluster (similar to average
-#'linkage), and "median", which uses median distance to the points in the
+#'linkage), and "median", which uses the median distance to the points in the
 #'cluster.
+#'
 #'@return A list of clusterings suitable for use with
 #'\code{perturbationStability}.
+#'
 #'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}},
 #'\code{\link{clusterings_from_kmeans}}
-hclust_stability <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
+#'
+#'@examples
+#' ############################################################
+#' ## Interfacing with the hierarchical clustering method
+#' library(easystab)
+#'
+#' X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+#'
+#' dx <- dist(scale(X))
+#' hc <- hclust(dx)
+#'
+#' cl_list <- from.hclust(dx, hc)
+#' stability_sequence <- perturbationStability(cl_list)
+#'
+#' # Information about the stability sequence
+#' print(stability_sequence)
+#' summary(stability_sequence)
+#'
+#' # Plot the stability sequence
+#' plot(stability_sequence)
+#'
+#' # Plot the most stable clustering.
+#' plot(stability_sequence$best, classes = iris[,"Species"])
+from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
 
   if(method != "average" & method != "median"){
     warning("only average and median methods are supported")
@@ -430,8 +467,6 @@ summary.StabilitySequence <- function(clusterings) {
                                 cl$stability_quantiles[[4]])
   }
 }
-
-
 
 #'Plot the stability scores produced by perturbationStability as a sequence of
 #'box plots.
