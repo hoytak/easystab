@@ -1,3 +1,7 @@
 library(easystab)
-cen <- matrix(c(1,0,-1,0,0,1), nrow=3, byrow=TRUE)
-plotStabilityImage(cen, 0, 301, 301, -1.5, 1.5, -0.5, 2.5)
+
+cen <- matrix(c(0,-1,-2,2,0,1, 3,3), nrow=4, byrow=TRUE)
+
+Z <- makeStabilityImage(cen, theta=2, size=c(502,502), buffer=2)
+
+image(Z$x, Z$y, Z$stability)

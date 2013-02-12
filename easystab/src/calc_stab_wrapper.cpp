@@ -9,7 +9,7 @@ extern "C" SEXP _make_stability_image(SEXP stab_image_, SEXP image_nx_, SEXP ima
 				      SEXP image_x_lower_, SEXP image_x_upper_,
 				      SEXP image_y_lower_, SEXP image_y_upper_,
 				      SEXP centroids_, SEXP K_, SEXP beta_, 
-				      SEXP xvec_, SEXP yvec_){
+				      SEXP xvec_, SEXP yvec_, SEXP buffer_){
 
   double * stab_image = REAL(stab_image_);
   size_t image_nx = INTEGER(image_nx_)[0];
@@ -23,9 +23,11 @@ extern "C" SEXP _make_stability_image(SEXP stab_image_, SEXP image_nx_, SEXP ima
   double beta = REAL(beta_)[0];
   double * xvec = REAL(xvec_);
   double * yvec = REAL(yvec_);
+  double buffer = REAL(buffer_)[0];
 
-  make_stability_image(stab_image, image_nx, image_ny, image_x_lower, image_x_upper, image_y_lower, image_y_upper,
-		       centroids, K, beta, xvec, yvec);
+  make_stability_image(stab_image, image_nx, image_ny, 
+		       image_x_lower, image_x_upper, image_y_lower, image_y_upper,
+		       centroids, K, beta, xvec, yvec, buffer);
 
   SEXP retval;
   PROTECT(retval = NEW_INTEGER(1));

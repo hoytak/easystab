@@ -366,7 +366,7 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 			  double image_x_lower, double image_x_upper, 
 			  double image_y_lower, double image_y_upper, 
 			  double *centroids,  size_t K, // centroids is a K x 2 matrix
-			  double beta, double *xvec, double *yvec)
+			  double beta, double *xvec, double *yvec, double edge_buffer)
 {
   if(K == 0) {
     fill(stab_image, stab_image + image_nx*image_ny, 0);
@@ -375,6 +375,12 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
     fill(stab_image, stab_image + image_nx*image_ny, 1);
     return;
   }
+
+  if(image_x_upper < image_x_lower)
+    swap(image_x_upper, image_x_lower);
+
+  if(image_y_upper < image_y_lower)
+    swap(image_y_upper, image_y_lower);
 
   if (image_x_upper == 0 && image_x_lower == 0
       && image_y_upper == 0 && image_y_lower == 0) {
@@ -392,8 +398,8 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
     }
 
     // Add in a buffer region
-    double buffer_x = 0.1 * (image_x_upper - image_x_lower);
-    double buffer_y = 0.1 * (image_y_upper - image_y_lower);
+    double buffer_x = edge_buffer * (image_x_upper - image_x_lower);
+    double buffer_y = edge_buffer * (image_y_upper - image_y_lower);
 
     image_x_lower -= buffer_x;
     image_x_upper += buffer_x;

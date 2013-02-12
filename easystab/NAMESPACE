@@ -1,6 +1,6 @@
 useDynLib(easystab)
 
-export(perturbationStability,plotStabilityImage, kmeans_stability, hclust_stability, getOptTheta)
+export(perturbationStability,makeStabilityImage, kmeans_stability, hclust_stability, getOptTheta)
 
 S3method(print, StabilityReport)
 S3method(print, StabilitySequence)
