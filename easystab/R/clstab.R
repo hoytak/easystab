@@ -1,27 +1,66 @@
 StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
 
 
-_processListOfClusterings <- function(clusterings) {
+.processListOfClusterings <- function(clusterings) {
   ## Test whether a list of clusterings is actually a list of
   ## clusterings or a single clustering.
 
-  if(! is.null(clusterings$dists)) {
+  give_label_warning <- TRUE
+
+  # Function for checking the label stuff
+  checked_labels <- function(clustering, index = NULL) {
+
+    X <- clustering$dists
+    
+    if(is.null(clustering$labels)) {
+      if(give_label_warning) {
+        warning("'labels' attribute in clustering not supplied; defaulting to minimum distance.")
+        give_label_warning <<- FALSE
+      }
+      
+      labels <- apply(X, 1, which.min)
+      
+    } else {
+      labels <- as.integer(clustering$labels)
+
+      if(max(labels) > ncol(X) || min(labels) < 1) {
+
+        if(is.null(index))
+          stop("'labels' vector contains indices out of range of 1,...,K.")
+        else
+          stop(sprintf("'labels' vector in entry %d contains indices out of range of 1,...,K.",
+                       index))
+      }
+    }
+
+    labels
+  }
+
+  if(is.matrix(clusterings)) {
+
+    is_list <- FALSE
+
+    X <- clusterings
+    clusterings <- list()
+    clusterings$dists <- X
+    n_points <- nrow(X)
+    
+    give_label_warning <- FALSE
+
+    clusterings$labels <- checked_labels(clusterings)
+    
+  } else if(! is.null(clusterings$dists)) {
 
     is_list <- FALSE
 
     clusterings$dists <- as.matrix(clusterings$dists)
-    
-    if(is.null(clusterings$labels)) {
-      warning("'labels' attribute in clusterings not supplied; defaulting to minimum distance.")
-      clusterings$labels <- apply(clusterings$dists, 1, which.min)
-    }
+    clusterings$labels <- checked_labels(clusterings)
 
     n_points <- nrow(clusterings$dists)
     
   } else {
 
     is_list <- TRUE
-    gave_label_warning <- FALSE
     n_points <- NULL
         
     for(i in 1:length(clusterings)) {
@@ -45,14 +84,19 @@ _processListOfClusterings <- function(clusterings) {
       if(is.null(clusterings[[i]]$labels)) {
         if(!gave_label_warning) {
           warning("'labels' attribute not supplied in all clusterings; defaulting to minimum distance.")
-          gave_label_warning <- TRUE
         }
         
         clusterings$labels <- apply(clusterings[[i]]$dists, 1, which.min)
-      }
-      
+      } 
     }
   }
+
+  if(!is_list) {
+    tp_clusterings <- clusterings
+    clusterings <- list()
+    clusterings[[1]] <- tp_clusterings
+  }
+  
   list(is_list <- is_list,
        clusterings <- clusterings,
        n_points <- n_points)
@@ -83,7 +127,7 @@ f_theta <- function(t, clusterings, seed, n_baselines){
 #'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}}
 getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
-  clusterings <- _processListOfClusterings(clusterings)$clusterings
+  clusterings <- .processListOfClusterings(clusterings)$clusterings
   
   res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001,
                   clusterings = clusterings, seed = seed, n_baselines = n_baselines)
@@ -94,24 +138,101 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 
 #'Calculate clustering perturbation stability.
 #'
-#' Calculates the stability of clusterings under a non-parametric Bayesian perturbation as described in in [[PAPER]]. The exact method used is to perturb the cluster-to-point distances by scaling them with a shifted exponential random variable, then computing the probabilities of membership for each of the points under this perturbation.  This is compared against a set of randomly sampled bootstrapped baselines to determine the final stability score.
+#' Calculates the stability of clusterings under a non-parametric
+#' Bayesian perturbation as described in in [[PAPER]]. The exact
+#' method used is to perturb the cluster-to-point distances by
+#' scaling them with a shifted exponential random variable, then
+#' computing the probabilities of membership for each of the points
+#' under this perturbation.  This is compared against a set of
+#' randomly sampled bootstrapped baselines to determine the final
+#' stability score.
 #' 
-#'@param clusterings A single clustering or a list of clusterings. Each clustering of \code{n} data points into \code{K} clusters is specified primarily by matrix giving point to cluster distances.   Specifically, clustering must contain an of \code{n} by \code{K} distance matrix giving the point to cluster distance (\code{K} can be different across clusterings). Optionally, an array of \code{n} integer labels \code{labels} in \code{1,...,K} is expected; if not present, a warning is given and the labels are computed according to the minimum point-to-cluster distance.
+#'@param clusterings A point-to-cluster distance matrix, a single
+#'clustering, or a list of clusterings. Each clustering of \code{n}
+#'data points into \code{K} clusters is specified primarily by
+#'matrix giving point to cluster distances.  Specifically,
+#'clustering must contain an of \code{n} by \code{K} distance
+#'matrix giving the point to cluster distance (\code{K} can be
+#'different across clusterings). Optionally, an array of \code{n}
+#'integer labels \code{labels} in \code{1,...,K} is expected; if
+#'not present, a warning is given and the labels are computed
+#'according to the minimum point-to-cluster distance.  If only the
+#'distance matrix is given, then points are assigned to their
+#'minimum distance cluster with no warning.
 #'
 #'@param seed Random seed used for generating the baseline stability matrices.
 #'
-#'@param n_baselines The number of random baseline matrices to use in computing the stability scores.  Increase this number to get more accuracy at the expense of speed.
+#'@param n_baselines The number of random baseline matrices to use
+#'in computing the stability scores.  Increase this number to get
+#'more accuracy at the expense of speed.
 #'
-
-#'@param Kmap_mode Whether to reorder the clusters in the stability map image for aesthetic reasons.  0 (default) means to not order them, 1 orders them by size, 2 orders them by average stability.  
-
-#'@param theta The log of the rate parameter passed to the shifted exponential prior on the perturbations.  The parameter indexes the strength of the perturbations, with smaller values translating into stronger perturbations.  If NULL, theta is chosen by optimizing the overall stability against the baseline distributions as in \code{\link{getOptTheta}}.
-                                        #'
-#'@return Returns an object of type StabilitySequence if a list of clusterings is supplied, otherwise returns an object of type StabilityReport.  A StabilitySequence is essentially a list of StabilityReport objects corresponding to the original list of clusterings.
+#'@param Kmap_mode Whether to reorder the clusters in the stability
+#'map image for aesthetic reasons.  0 (default) means to not order
+#'them, 1 orders them by size, 2 orders them by average stability.
 #'
-#'A StabilityReport object contains the original \code{dists}, \code{labels} (possibly calculated), the scalar stability score \code{stability}, the empirical collection of stability scores \code{scores}, the theta parameter used or found \code{theta}, the individual membership probabilities of the points under perturbation, the \code{stability_matrix}
-#'the sorted stability matrix used for plotting the behavior of the clustering.
-
+#'@param theta The log of the rate parameter passed to the shifted
+#'exponential prior on the perturbations.  The parameter indexes
+#'the strength of the perturbations, with smaller values
+#'translating into stronger perturbations.  If NULL, theta is
+#'chosen by optimizing the overall stability against the baseline
+#'distributions as in \code{\link{getOptTheta}}.
+#'
+#'@return Returns an object of type StabilitySequence if a list of
+#'clusterings is supplied, otherwise returns an object of type
+#'StabilityReport.  A StabilitySequence is essentially a list of
+#'StabilityReport objects corresponding to the original list of
+#'clusterings.
+#'
+#'A StabilityReport object contains the original \code{dists},
+#'\code{labels} (possibly calculated), the scalar stability score
+#'\code{stability}, the empirical collection of stability scores
+#'\code{scores}, the theta parameter used or found \code{theta},
+#'the individual membership probabilities of the points under
+#'perturbation, the \code{stability_matrix} the sorted stability
+#'matrix used for plotting the behavior of the clustering.
+#'\code{print}, \code{summary}, and \code{plot} methods are
+#'provided.
+#'
+#'@examples
+#'## Toy example using a simple mixture model
+#'cen <- matrix(c(0,0,1,2,-1,0.5), ncol=2)
+#'
+#'## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
+#'X <- t(cbind(rbind(rnorm(100,mean=cen[[1,1]],sd=1),rnorm(100,mean=cen[[1,2]],sd=1)),
+#'             rbind(rnorm(100,mean=cen[[2,1]],sd=2),rnorm(100,mean=cen[[2,2]],sd=2)),
+#'             rbind(rnorm(100,mean=cen[[3,1]],sd=1),rnorm(100,mean=cen[[3,2]],sd=1))))
+#'
+#'dists  <- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
+#'labels <- c(rep(1,100), rep(2,100), rep(3,100))
+#'
+#'## Apply to just the distance matrix
+#'stability1 <- perturbationStability(dists)
+#'
+#'## Ways to display information
+#'print(stability1)
+#'summary(stability1)
+#'plot(stability1, classes=labels)
+#'
+#'## Add in our labels
+#'cl <- list(dists = dists, labels = labels)
+#'stability2 <- perturbationStability(cl)
+#'
+#'print(stability2)
+#'summary(stability2)
+#'plot(stability2, classes=labels)
+#'
+#'## Now try several numbers of clusters using kmeans
+#'km_list = list()
+#'
+#'for(k in 1:8)
+#'  km_list[[k]] = kmeans(X, k, iter.max=50, nstart=100)
+#'
+#'cl_list <- from.kmeans(X, km_list)
+#'stability_sequence <- perturbationStability(cl_list)
+#'
+#'print(stability_sequence)
+#'summary(stability_sequence)
+#'plot(stability_sequence)
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
                                   Kmap_mode = 0, theta = NULL, test_pvalue = 0.05){
   if(seed < 0){
@@ -119,7 +240,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
     return(NA)
   }
 
-  cl_info <- _processListOfClusterings(clusterings)
+  cl_info <- .processListOfClusterings(clusterings)
 
   clusterings <- cl_info$clusterings
   is_list <- cl_info$is_list
@@ -524,22 +645,25 @@ summary.StabilityReport <- function(clustering) {
 #'clustering) version, they are plotted alongside the heatmap plot, with class
 #'membership indexed by color.
 #'
+#'@param clustering A StabilityReport object, as given by an output
+#'of perturbationStability.
 #'
-#'@param clustering A clustering with stability analysis results attached, as
-#'given by an output of perturbationStability.
 #'@param classes Auxiliary class labels for the data points, possibly from
-#'known classes or other clusterings. The classes must integers in 1,...,L.  If
+#'known classes or other clusterings. The classes must be integers in 1,...,L.  If
 #'NULL, this column is not plotted.
+#'
 #'@param class_colors Colors to use when plotting the auxiliary class labels.
 #'If the given classes are in 1,...,L, it must be a list of at least L colors.
 #'If NULL, \code{RColorBrewer} is used to choose representative colors.
 #'Ignored if \code{classes} is \code{NULL}.
+#'
 #'@seealso \code{\link{easystab}}
+#'
 plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL){
-  
+
   require(grDevices)
   require(plotrix)
-  
+
   sorted_stability_matrix <- clustering$sorted_stability_matrix
 
   nrow <- dim(sorted_stability_matrix)[1]
@@ -584,7 +708,57 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
   }
 }
 
-makeStabilityImage <- function(centroids, theta = 0, bounds = NULL, size=c(501,501), buffer = 0.25) {
+#'Creates an image of the relative regions of stability for a 2d clustering.
+#'
+#'For a set of 2d centroids, shows the regions of stability and
+#'regions of instability for a given value of the perturbation
+#'hyperparameter.  The values in this plot indicate the
+#'contribution to the overall stability or instability from a point
+#'located at that value. This function is provided to demonstrate
+#'the intuitive behavior of the method and to help analyze 2d
+#'datasets.
+#'
+#'@param centroids Array of 2D centroid points, given as a K by 2 array or
+#'matrix.
+#'
+#'@param theta The hyperparameter for the perturbation distribution
+#'of the prior.  This can be automatically computed by
+#'\code{\link{perturbationStability}} or \code{\link{getOptTheta}},
+#'or given manually.  Smaller values penalize points on the
+#'boundary regions more severely. 
+#'
+#'@param bounds The bounds of the image, given as a four element array of
+#'\code{c(x_min, x_max, y_min, y_max)}. If bounds is NULL, it is calculated
+#'automatically from the centroids by giving a buffer region of \code{buffer}
+#'times the absolute spread of centroids.
+#'
+#'@param size Specify the x and y resolution of the image.  Given as
+#'\code{c(nx, ny)}; defaults to c(500,500).
+#'
+#'@param buffer If \code{bounds} is NULL, then gives the height or width of the
+#'margins of the image containing the centroids.  For each x and y coordinates,
+#'this margin is equal to \code{buffer} times the difference between the
+#'minimum and maximum values present in the list of centroids.
+#'
+#'@return A list with elements \code{stability}, \code{x},
+#'\code{y}, \code{bounds}, \code{centroids}, and \code{theta}.
+#'\code{stability} is the 2d image of size \code{size} to be
+#'plotted as the map of stable and unstable regions in the 2d
+#'space, \code{x} and \code{y} give the x and y positions in
+#'\code{stability}, \code{theta} gives the original \code{theta}
+#'passed to the image, and \code{bounds} contains the
+#'\code{c(x_min, x_max, y_min, y_max)} bounds of the image.
+#'
+#'@examples
+#'## Display the behavior of a set of centroids 
+#'library(easystab)
+#'
+#'cen <- matrix(c(0,-1,-2,2,0,1, 3,3), nrow=4, byrow=TRUE)
+#'
+#'Z <- make2dStabilityImage(cen, theta=2, buffer=2)
+#'image(Z$x, Z$y, Z$stability)
+#'points(Z$centroids)
+make2dStabilityImage <- function(centroids, theta = 1, bounds = NULL, size=c(500,500), buffer = 0.25) {
 
   image_nx <- size[[1]]
   image_ny <- size[[2]]
@@ -615,45 +789,4 @@ makeStabilityImage <- function(centroids, theta = 0, bounds = NULL, size=c(501,5
        theta = theta,
        x = xvec,
        y = yvec)
-}
-
-
-
-#'Plots a picture of the relative regions of stability for a 2d clustering.
-#'
-#'For a set of 2d centroids, shows the regions of stability and regions of
-#'instability for a given value of the perturbation hyperparameter.  This
-#'function is provided to demonstrate the behavior of the method in an
-#'intuitive way.
-#'
-#'
-#'@param centroids 2D array of 2D centroid points, given as a K by 2 array or
-#'matrix.
-#'@param theta The hyperparameter for the perturbation distribution of the
-#'prior.  This can be automatically computed by perturbationStability, or given
-#'manually.  Smaller values penalize the values on the boundary regions more
-#'severely.
-#'@param bounds The bounds of the image, given as a four element array of
-#'\code{c(x_min, x_max, y_min, y_max)}. If bounds is NULL, it is calculated
-#'automatically from the centroids by giving a buffer region of \code{buffer}
-#'times the absolute spread of centroids.
-#'@param size Specify the x and y resolution of the image.  Given as
-#'\code{c(nx, ny)}.
-#'@param buffer If \code{bounds} is NULL, then gives the height or width of the
-#'margins of the image containing the centroids.  For each x and y coordinates,
-#'this margin is equal to \code{buffer} times the difference between the
-#'minimum and maximum values present in the list of centroids.
-plotStabilityImage <- function(centroids, theta=0, bounds = NULL, size=c(501,501), buffer = 0.25) {
-
-  res <- stab_image <- makeStabilityImage(centroids, theta, bounds, size, buffer)
-  
-  require(grDevices)
-  require(plotrix)
-  color2D.matplot(res$stab_image[nrow(res$stab_image):1,], border=NA, xlab=NA, ylab=NA, axes=FALSE)
-  xlen <- length(res$xvec)
-  ylen <- length(res$yvec)
-  xarr <- c(1, as.integer((xlen+1)/4), as.integer((xlen+1)/2), as.integer((xlen+1)*3/4), xlen)
-  yarr <- c(1, as.integer((ylen+1)/4), as.integer((ylen+1)/2), as.integer((ylen+1)*3/4), ylen)
-  axis(1, at=xarr+0.5, labels=res$xvec[xarr])
-  axis(2, at=yarr+0.5, labels=res$yvec[yarr])
 }
