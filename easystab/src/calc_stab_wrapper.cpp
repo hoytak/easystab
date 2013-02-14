@@ -37,11 +37,12 @@ extern "C" SEXP _make_stability_image(SEXP stab_image_, SEXP image_nx_, SEXP ima
   return retval;
 }
 
-extern "C" SEXP _sorted_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_, SEXP X_, SEXP labels_,SEXP n_, SEXP K_, SEXP beta_, SEXP Kmap_mode_){
+extern "C" SEXP _sort_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_, SEXP src_, 
+				       SEXP labels_, SEXP n_, SEXP K_, SEXP beta_, SEXP Kmap_mode_){
   double * dest = REAL(dest_);
   int * index_map = INTEGER(index_map_);
   int * K_map = INTEGER(K_map_);
-  double * X = REAL(X_);
+  double * src = REAL(src_);
   int * labels = INTEGER(labels_);
   int n = INTEGER(n_)[0];
   int K = INTEGER(K_)[0];
@@ -52,12 +53,15 @@ extern "C" SEXP _sorted_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map
   for(int i=0; i<n; i++)
     labels[i] --;
 
-  sorted_stability_matrix(dest, index_map, K_map, X, labels, n, K, beta, Kmap_mode);
-
+  sort_stability_matrix(dest, index_map, K_map, src, labels, n, K, beta, Kmap_mode);
 
   for(int i=0; i<n; i++){
     labels[i] ++;
     index_map[i] ++;
+  }
+
+  for(int k=0; k<K; k++){
+    K_map[k]++;
   }
 
   SEXP retval;
@@ -90,10 +94,15 @@ extern "C" SEXP _score(SEXP dist_, SEXP n_, SEXP K_, SEXP seed_,
   return retval;
 }
 
-extern "C" SEXP _calculateScores(SEXP scores_, SEXP src_, SEXP n_, SEXP K_, SEXP seed_, SEXP n_baselines_,
+extern "C" SEXP _calculateScores(SEXP scores_, SEXP confusion_, SEXP stability_matrix_,
+				 SEXP src_, SEXP labels_, 
+				 SEXP n_, SEXP K_, SEXP seed_, SEXP n_baselines_,
 				 SEXP beta_, SEXP use_permutations_, SEXP by_dimension_){
   double* scores = REAL(scores_);
+  double* confusion = REAL(confusion_);
+  double* stability_matrix = REAL(stability_matrix_);
   double* src = REAL(src_);
+  int * labels = INTEGER(labels_);
   size_t n = INTEGER(n_)[0];
   size_t K = INTEGER(K_)[0];
   size_t seed = INTEGER(seed_)[0];
@@ -102,7 +111,16 @@ extern "C" SEXP _calculateScores(SEXP scores_, SEXP src_, SEXP n_, SEXP K_, SEXP
   bool use_permutations = LOGICAL(use_permutations_)[0] != 0;
   bool by_dimension = LOGICAL(by_dimension_)[0] != 0;
 
-  calculateScores(scores, src, n, K, seed, n_baselines, beta, use_permutations, by_dimension);
+  for(int i=0; i<n; i++)
+    labels[i] --;
+
+  calculateScores(scores, confusion, stability_matrix, src, labels, 
+		  n, K, seed, n_baselines, 
+		  beta, use_permutations, by_dimension);
+
+  for(int i=0; i<n; i++){
+    labels[i] ++;
+  }
 
   SEXP retval;
   PROTECT(retval = NEW_INTEGER(1));

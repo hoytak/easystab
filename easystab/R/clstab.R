@@ -8,12 +8,12 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
   give_label_warning <- TRUE
 
   # Function for checking the label stuff
-  checked_labels <- function(clustering, index = NULL) {
+  checked_labels <- function(clustering, suppress_warning, index = NULL) {
 
     X <- clustering$dists
     
     if(is.null(clustering$labels)) {
-      if(give_label_warning) {
+      if(!suppress_warning && give_label_warning) {
         warning("'labels' attribute in clustering not supplied; defaulting to minimum distance.")
         give_label_warning <<- FALSE
       }
@@ -45,16 +45,14 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
     clusterings$dists <- X
     n_points <- nrow(X)
     
-    give_label_warning <- FALSE
-
-    clusterings$labels <- checked_labels(clusterings)
+    clusterings$labels <- checked_labels(clusterings, TRUE)
     
   } else if(! is.null(clusterings$dists)) {
 
     is_list <- FALSE
 
     clusterings$dists <- as.matrix(clusterings$dists)
-    clusterings$labels <- checked_labels(clusterings)
+    clusterings$labels <- checked_labels(clusterings FALSE)
 
     n_points <- nrow(clusterings$dists)
     
@@ -62,13 +60,22 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
 
     is_list <- TRUE
     n_points <- NULL
-        
+    
     for(i in 1:length(clusterings)) {
-
-      X <- clusterings[[i]]$dists
       
-      if(is.null(X)) {
-        stop(sprintf("'dists' attribute not present in clustering component %d", i))
+      cl <- clusterings[[i]]
+      
+      if(is.matrix(cl)) {
+        suppress_label_conversion_warning <- TRUE
+        X <- cl
+      } else {
+        suppress_label_conversion_warning <- FALSE
+      
+        X <- clusterings[[i]]$dists
+      
+        if(is.null(X)) {
+          stop("'dists' attribute not present in clustering component ", i, ".")
+        }
       }
 
       if(is.null(n_points))
@@ -80,17 +87,10 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
       }
       
       clusterings[[i]]$dists <- as.matrix(X)
-      
-      if(is.null(clusterings[[i]]$labels)) {
-        if(!gave_label_warning) {
-          warning("'labels' attribute not supplied in all clusterings; defaulting to minimum distance.")
-        }
-        
-        clusterings$labels <- apply(clusterings[[i]]$dists, 1, which.min)
-      } 
+      clusterings$labels <- checked_labels(clusterings[[i]], suppress_label_conversion_warning)
     }
   }
-
+  
   if(!is_list) {
     tp_clusterings <- clusterings
     clusterings <- list()
@@ -112,6 +112,34 @@ f_theta <- function(t, clusterings, seed, n_baselines){
   -score_total
 }
 
+## Orders the stability sequence by ensuring there is at most one for
+## each K, and all in order
+.orderedStabilitySequence <- function(clusterings, as_list_of_lists) {
+  
+  cl_K_list = list(1:max(sapply(clusterings, function(l){l$K})))
+
+  for(idx in 1:length(clusterings)){
+    cl <- clusterings[[idx]]
+    K <- cl$K
+      
+    cl$.original_index <- idx
+
+    if(as_list_of_lists)
+      cl_K_list[[K]] <- c(cl_K_list[[K]], cl)
+    else if(is.null(cl_K_list[[K]]) || cl_K_list[[K]]$stability < cl$stability)
+      cl_K_list[[K]] <- cl
+  }
+
+  cl_K_list <- Filter(Negate(is.null),  cl_K_list)
+
+  if(as_list_of_lists) {
+    `>.StabilityReport` <- function(l1, l2) {  l1$score > l2$score }
+    `==.StabilityReport` <- function(l1, l2) { l1$score == l2$score }
+    cl_K_list <- lapply(cl_K_list, sort)
+  }
+
+  cl_K_list
+}
 
 #'Calculates the optimal prior parameter
 #'
@@ -134,7 +162,6 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
   res$minimum
 }
-
 
 #'Calculate clustering perturbation stability.
 #'
@@ -165,10 +192,6 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'@param n_baselines The number of random baseline matrices to use
 #'in computing the stability scores.  Increase this number to get
 #'more accuracy at the expense of speed.
-#'
-#'@param Kmap_mode Whether to reorder the clusters in the stability
-#'map image for aesthetic reasons.  0 (default) means to not order
-#'them, 1 orders them by size, 2 orders them by average stability.
 #'
 #'@param theta The log of the rate parameter passed to the shifted
 #'exponential prior on the perturbations.  The parameter indexes
@@ -233,10 +256,10 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'print(stability_sequence)
 #'summary(stability_sequence)
 #'plot(stability_sequence)
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
-                                  Kmap_mode = 0, theta = NULL, test_pvalue = 0.05){
+perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta = NULL, test_pvalue = 0.05){
+
   if(seed < 0){
-    warning("seed cannot be negative. your input is ", seed)
+    warning("Random seed cannot be negative. your input is ", seed)
     return(NA)
   }
 
@@ -258,31 +281,23 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
     l <- clusterings[[idx]]
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
-    
-    if(is.null(X)){
-      warning("clustering ", idx, " does not have point to centroid distance matrix\n")
-      return(NA)
-    }
-
     d <- dim(X)
-
-    .Call('_calculateScores', scores, t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
+    K <- d[2]
     
-    l$K <- d[2]
+    confusion_matrix <- matrix(0, ncol = K, nrow = K)
+    stability_matrix <- matrix(0, ncol = d[1], nrow = K)
+    
+    .Call('_calculateScores', scores, confusion_matrix, stability_matrix,
+          t(X), d[1], d[2],
+          as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
+    
+    l$K <- K
     l$stability <- mean(scores)
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores <- scores
-        
-    Z <- -matrix(1, ncol = d[1], nrow = d[2])
-    index_map <- rep(as.integer(NA), times=d[1])
-    K_map <- rep(as.integer(NA), d[2])
-    labels <- l$labels
 
-    .Call('_sorted_stability_matrix', Z, index_map, K_map, t(X), labels, d[1], d[2], opt_theta, as.integer(Kmap_mode))
-
-    l$sorted_stability_matrix <- t(Z)
-    l$sorted_stability_matrix_index_map <- index_map
-    l$sorted_stability_matrix_cluster_map <- K_map
+    l$confusion_matrix <- confusion_matrix
+    l$stability_matrix <- stability_matrix
     l$theta <- opt_theta
 
     class(l) <- "StabilityReport"
@@ -294,27 +309,10 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
   
   if(is_list){
     ## Add in a bunch of estimates of the overall clustering stability
-
-    cl_K_list = list()
-
-    for(idx in 1:length(clusterings)){
-      cl <- clusterings[[idx]]
-      K <- cl$K
-      
-      cl$.original_index <- idx
-      
-      if(length(cl_K_list) < K
-         ||is.null(cl_K_list[[K]])
-         || cl_K_list[[K]]$stability < cl$stability) {
-        
-        cl_K_list[[K]] <- cl
-        
-      }
-    }
-      
+    cl_K_list <- .orderedStabilitySequence(clusterings, FALSE)
+    
     ## Get the most stable one.
-    get_stability <- function(l) l$stability
-    stability_vector <- sapply(cl_K_list, get_stability)
+    stability_vector <- sapply(cl_K_list, function(l) { l$stability } )
     e_idx <- which.max(stability_vector)
     
     ## See if there is not actually a most stable clustering. 
@@ -345,14 +343,12 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0,
       estimated_K <- e_idx
         
       for(kidx in 1:(e_idx-1)) {
-        if(!is.null(cl_K_list[[kidx]])) {
-          res <- t.test(cl_K_list[[kidx]]$scores, cl_K_list[[e_idx]]$scores)
-          t_stat <- res$statistic
-          pv <- res$p.value * 0.5
-          if(pv > test_pvalue){
-            estimated_K <- kidx
-            break
-          }
+        res <- t.test(cl_K_list[[kidx]]$scores, cl_K_list[[e_idx]]$scores)
+        t_stat <- res$statistic
+        pv <- res$p.value * 0.5
+        if(pv > test_pvalue){
+          estimated_K <- kidx
+          break
         }
       }
       
@@ -556,6 +552,8 @@ from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "avera
   clusterings
 }
 
+#' Print a brief summary of the stability of a clustering collection.
+#' 
 print.StabilitySequence <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
@@ -573,7 +571,6 @@ summary.StabilitySequence <- function(clusterings) {
   
   X <- data.frame()
   
-  idx <- 1
   for(idx in 1:length(clusterings)) {
     cl <- clusterings[[idx]]
     if(idx == clusterings$estimated_index)
@@ -587,6 +584,8 @@ summary.StabilitySequence <- function(clusterings) {
                                 cl$stability_quantiles[[1]],
                                 cl$stability_quantiles[[4]])
   }
+  
+  print(X)
 }
 
 #'Plot the stability scores produced by perturbationStability as a sequence of
@@ -596,18 +595,41 @@ summary.StabilitySequence <- function(clusterings) {
 #'stability scores produced by perturbationStability as a sequence of box
 #'plots.
 #'
-#'
 #'@param clusterings The output of \code{perturbationStablity} -- a list of
 #'clusters with perturbation stability analyses.
-plot.StabilitySequence <- function(clusterings){
-  get_scores <- function(l) l$scores
-  get_K <- function(l) dim(l$dists)[2]
-  score_list <- lapply(clusterings, get_scores)
-  name_vector <- sapply(clusterings, get_K)
-  names(score_list) <- name_vector
-  boxplot(score_list)
+
+## @param sort Whether to sort the results in ascending order by the
+## number of clusters in the data.
+
+
+
+plot.StabilitySequence <- function(clusterings, sort = TRUE, prune = FALSE){
+
+  if(sort && !prune) {
+
+    cl_K_list <- .orderedStabilitySequence(clusterings, TRUE)
+
+    for(cl_list in cl_K_list) {
+      
+  
+
+  } else {
+
+    if(sort && prune)
+      clusterings <- .orderedStabilitySequence(clusterings, FALSE)
+
+    score_list <- lapply(clusterings, function(l) { l$scores} )
+    name_vector <- sapply(clusterings, function(l) { l$K })
+    names(score_list) <- name_vector
+    boxplot(score_list, main = "Adjusted Log-Stability Scores", xlab = "Clustering", ylab = "Stability Score")
+  }
+  
+
+  
 }
 
+#'Print a brief summary of the stability of an undividual clustering under perturbation. 
+#'
 print.StabilityReport <- function(clustering) {
 
   cat(sprintf("Perturbation Stability Report:\n"))
@@ -619,20 +641,27 @@ print.StabilityReport <- function(clustering) {
               clustering$stability_quantiles[[4]]))
 }
 
+#'Print a summary of the stability of an undividual clustering under perturbation. 
+#'
+#' Print a summary of the stability of an undividual clustering under
+#' perturbation.  Summary includes individual cluster stabilites.
 summary.StabilityReport <- function(clustering) {
 
-  cat(sprintf("Perturbation Stability Summary:\n"))
-  cat(sprintf("  %d data points grouped into %d clusters.\n",
-              dim(clustering$sorted_stability_matrix)[1], dim(clustering$K)))
-  cat(sprintf("  Stability score = %f; 95%% confidence interval = [%f, %f].",
-              clustering$stability,
-              clustering$stability_quantiles[[1]],
-              clustering$stability_quantiles[[4]]))
+  print.StabilityReport(clustering)
+  
+  cat(sprintf("Stability of Each Cluster Under Perturbation:\n"))
+  cat(sprintf("  (Each row gives the average membership probabilties under perturbation for data in that cluster.)\n"))
 
-  # Need more stuff in here; stability of each cluster for example...
+  X <- data.frame(clustering$confusion_matrix)
+
+  colnames <- list()
+  for(ki in 1:ncol(X)) 
+    colnames[[ki]] <- sprintf("--> %d", ki)
+
+  col.names(X) <- colnames
+  
+  print(X)
 }
-
-
 
 #'Display the stability of a clustering as a heat map plot.
 #'
@@ -657,14 +686,26 @@ summary.StabilityReport <- function(clustering) {
 #'If NULL, \code{RColorBrewer} is used to choose representative colors.
 #'Ignored if \code{classes} is \code{NULL}.
 #'
+#'@param Kmap_mode Whether to reorder the clusters in the stability
+#'map image for aesthetic reasons.  0 (default) means to not reorder
+#'them, 1 orders them by cluster size, and 2 orders them by average stability.
+#'
 #'@seealso \code{\link{easystab}}
 #'
-plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL){
+plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, Kmap_mode = 0){
 
   require(grDevices)
   require(plotrix)
 
-  sorted_stability_matrix <- clustering$sorted_stability_matrix
+  d <- dim(clustering$stability_matrix)
+  sorted_stability_matrix <- -matrix(1, ncol = d[1], nrow = d[2])
+  index_map <- rep(as.integer(NA), times=d[1])
+  K_map <- rep(as.integer(NA), d[2])
+  labels <- clustering$labels
+
+  .Call('_sort_stability_matrix', sorted_stability_matrix, index_map, K_map,
+        clustering$stability_matrix, labels,
+        d[1], d[2], opt_theta, as.integer(Kmap_mode))
 
   nrow <- dim(sorted_stability_matrix)[1]
   ncol <- dim(sorted_stability_matrix)[2]

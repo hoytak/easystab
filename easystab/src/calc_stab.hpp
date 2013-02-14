@@ -173,7 +173,6 @@ void sort_stability_matrix(double *dest, int *indexes, int *K_map,
       sort(K_mapping.begin(), K_mapping.end(), KmapSorter_2(counts,avg_index));
     default: break;
     }
-      
 
     for(size_t k = 0; k < K; ++k)
       Km[K_mapping[k]] = k;
@@ -200,26 +199,23 @@ void sort_stability_matrix(double *dest, int *indexes, int *K_map,
   }
 }
 
-void sorted_stability_matrix(double *dest, int *indexes, int *K_map, 
-			     double *X, int *labels,
-			     size_t n, size_t K, double beta, int Kmap_mode) {
-
-  double *stab_matrix = new double[n*K];
-
-  stability_matrix(stab_matrix, X, n, K, beta);
-
-  sort_stability_matrix(dest, indexes, K_map, stab_matrix, 
-			labels, n, K, Kmap_mode);
-
-  delete[] stab_matrix;
-}
-
 double log_score(const vector<double>& src, size_t n, size_t K) {
 
   double total = 0;
 
   for(size_t i = 0; i < n; ++i)
     total += *max_element(src.begin() + i*K, src.begin() + (i+1)*K);
+
+  return total / n;
+}
+
+template <typename Array1, typename Array2>
+double log_score(const Array1& src, const Array2& labels, size_t n, size_t K) {
+
+  double total = 0;
+
+  for(size_t i = 0; i < n; ++i)
+    total += src[i*K + labels[i]];
 
   return total / n;
 }
@@ -284,15 +280,38 @@ static inline void fill_baseline_matrix(Array& dest, const double *src,
 }
 
 template <typename Array>
-void calculateScores(double * scores, const Array& src, size_t n, size_t K, size_t seed, 
+void calculateScores(double * scores, double * confusion_matrix, double * _stability_matrix, 
+		     const Array& src, int* labels, size_t n, size_t K, size_t seed, 
 		     size_t n_baselines, double beta, bool use_permutations, bool by_dimension) {
+
   vector<double> data_buffer(n*K);
-  vector<double> stab_buffer(n*K);
   Buffers buffer(K);
 
+  double *stability_matrix = (_stability_matrix == NULL) ? new double[n*K] : _stability_matrix;
+
   // Get the first one
-  _calc_stability_matrix(stab_buffer, src, n, K, beta, buffer);
-  const double dist_score = log_score(stab_buffer, n, K);
+  _calc_stability_matrix(stability_matrix, src, n, K, beta, buffer);
+  const double dist_score = log_score(stab_buffer, labels, n, K);
+
+  if(confusion_matrix != NULL) {
+    // Now set up the confusion matrix
+    vector<size_t> cl_counts(K, 0);
+    fill(confusion_matrix, confusion_matrix + K*K, 0);
+
+    for(size_t i = 0; i < n; ++i) {
+      size_t k = size_t(labels[i]); 
+      ++cl_counts[k];
+
+      for(size_t ki = 0; ki < K; ++ki)
+	confusion_matrix[k*K + ki] += stability_matrix[i*K + ki];
+    }
+
+    for(size_t k = 0; k < K; ++k) {
+      for(size_t ki = 0; ki < K; ++ki) {
+	confusion_matrix[k*K + ki] /= (1e-32 + cl_counts[k]);
+      }
+    }
+  }
 
   // Set up the rest of the baselines
   CheapRNG uniform_int(seed);
@@ -302,20 +321,23 @@ void calculateScores(double * scores, const Array& src, size_t n, size_t K, size
   generate(seeds.begin(), seeds.end(), uniform_int);
 
   for(size_t i = 0; i < n_baselines; ++i) {
-    
     fill_baseline_matrix(data_buffer, src, n, K, seeds[i], use_permutations, by_dimension);
     _calc_stability_matrix(stab_buffer, data_buffer, n, K, beta, buffer);
     scores[i] = dist_score - log_score(stab_buffer, n, K);
   }
+
+  if(_stability_matrix == NULL) 
+    delete[] stability_matrix;
 }
 
 template <typename Array1>
-double score(const Array1& dist, size_t n, size_t K, size_t seed,
+double score(const Array1& dist, int* labels, size_t n, size_t K, size_t seed,
 	     size_t n_baselines, double beta, bool use_permutations, bool by_dimension)
 {
   double *scores = new double[n_baselines];
 
-  calculateScores(scores, dist, n, K, seed, n_baselines, beta, use_permutations, by_dimension);
+  calculateScores(scores, (double*)NULL, (double*)NULL, dist,labels, 
+		  n, K, seed, n_baselines, beta, use_permutations, by_dimension);
 
   double result =  accumulate(scores, scores + n_baselines, double(0)) / n_baselines;
 
@@ -323,12 +345,11 @@ double score(const Array1& dist, size_t n, size_t K, size_t seed,
   return result;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // Now for the silhouette distances
 
 static inline double calculateSilhouette(double *silhouettes,  double *silhouette_distances, 
-				       int *labels, size_t n, size_t K) {
+					 int *labels, size_t n, size_t K) {
 
   double silhouette_total = 0;
 
