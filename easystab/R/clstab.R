@@ -114,7 +114,7 @@ f_theta <- function(t, clusterings, seed, n_baselines){
 
 ## Orders the stability sequence by ensuring there is at most one for
 ## each K, and all in order
-.orderedStabilitySequence <- function(clusterings, as_list_of_lists) {
+.orderedStabilityCollection <- function(clusterings, as_list_of_lists) {
   
   cl_K_list = list(1:max(sapply(clusterings, function(l){l$K})))
 
@@ -133,7 +133,7 @@ f_theta <- function(t, clusterings, seed, n_baselines){
   cl_K_list <- Filter(Negate(is.null),  cl_K_list)
 
   if(as_list_of_lists) {
-    `>.StabilityReport` <- function(l1, l2) {  l1$score > l2$score }
+    `>.StabilityReport` <- function(l1, l2) {  l1$score < l2$score }
     `==.StabilityReport` <- function(l1, l2) { l1$score == l2$score }
     cl_K_list <- lapply(cl_K_list, sort)
   }
@@ -200,9 +200,9 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'chosen by optimizing the overall stability against the baseline
 #'distributions as in \code{\link{getOptTheta}}.
 #'
-#'@return Returns an object of type StabilitySequence if a list of
+#'@return Returns an object of type StabilityCollection if a list of
 #'clusterings is supplied, otherwise returns an object of type
-#'StabilityReport.  A StabilitySequence is essentially a list of
+#'StabilityReport.  A StabilityCollection is essentially a list of
 #'StabilityReport objects corresponding to the original list of
 #'clusterings.
 #'
@@ -305,11 +305,11 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     clusterings[[idx]] <- l
   }
 
-  class(clusterings) <- "StabilitySequence"
+  class(clusterings) <- "StabilityCollection"
   
   if(is_list){
     ## Add in a bunch of estimates of the overall clustering stability
-    cl_K_list <- .orderedStabilitySequence(clusterings, FALSE)
+    cl_K_list <- .orderedStabilityCollection(clusterings, FALSE)
     
     ## Get the most stable one.
     stability_vector <- sapply(cl_K_list, function(l) { l$stability } )
@@ -554,7 +554,7 @@ from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "avera
 
 #' Print a brief summary of the stability of a clustering collection.
 #' 
-print.StabilitySequence <- function(clusterings) {
+print.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
   cat(sprintf("  %d clusterings. \n", length(clusterings)))
@@ -562,7 +562,7 @@ print.StabilitySequence <- function(clusterings) {
   
 }
 
-summary.StabilitySequence <- function(clusterings) {
+summary.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
   cat(sprintf("  %d clusterings. \n", length(clusterings)))
@@ -595,28 +595,80 @@ summary.StabilitySequence <- function(clusterings) {
 #'stability scores produced by perturbationStability as a sequence of box
 #'plots.
 #'
-#'@param clusterings The output of \code{perturbationStablity} -- a list of
-#'clusters with perturbation stability analyses.
-
+## @param clusterings The output of \code{perturbationStablity} -- a
+## list of clusters with perturbation stability analyses.
+## Additionally, set the label attribute of a specific clustering in
+## order to change the corresponding label on the box plots. For
+## example, \code{clusterings[[5]]$label <- "Clust5"} sets the
+## displayed label of that clustering, overriding the generated
+## labels.  
+## 
 ## @param sort Whether to sort the results in ascending order by the
-## number of clusters in the data.
+## number of clusters in the data, then by stability scores within the
+## clusters.  
+## 
+## @param prune If sort is TRUE, and multiple clusterings are given
+## for a specific number of clusters, then show only the most stable
+## one from each group.  For example, if there were three clusterings
+## in the collection that had 5 clusters, only the most stable of
+## those three would be displayed.
+## 
+## @param label.indices If \code{label.indices} is TRUE, then the
+## original indices from \code{clusterings} is included in the label
+## for each box plot; if FALSE, they are not included.  If
+## \code{label.indices} is NULL (default), then they are included only
+## if items in the graph are reordered.  Note that setting the
+## \code{label} attribute on the clusterings input overrides this.
+## 
+## \param color.best Color the best clustering with this cluster.
+## Ignored if NULL.
+
+plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, label.indices = NULL, color.best = "red"){
+
+  make.label <- function(cl, in_order) {
+    if(!is.null(cl$label)) {
+      return(cl$label)
+    } else if(is.null(label.indices) && in_order) {
+      return(sprintf("%d", cl$K))
+    } else if(label.indices) {
+      return(sprintf("%d,K=%d", cl$.original_index, cl$K))
+    } else {
+      return(sprintf("%d", cl$K))
+    }
+  }
+
+  make_boxplot <- function(score_list, name_list, width_list) {
+    
 
 
+  }
 
-plot.StabilitySequence <- function(clusterings, sort = TRUE, prune = FALSE){
-
+  
   if(sort && !prune) {
 
-    cl_K_list <- .orderedStabilitySequence(clusterings, TRUE)
+    cl_K_list <- .orderedStabilityCollection(clusterings, TRUE)
 
+    ## Test if everything is in order, and the sequence of 
+    if(length(cl_K_list) == length(clusterings)) {
+      if(is.sorted(sapply(cl_K_list, function(cl) {cl$K}))) {
+        score_list <- lapply(clusterings, function(l) { l$scores} )
+        name_vector <- sapply(clusterings, function(l) { l$K } )
+        
+      }
+    }
+    xpos=1
     for(cl_list in cl_K_list) {
-      
-  
+      xpos_vec <- c(xpos_vec, x_pos+(0:(length(cl_list) - 1))/2)
+      xpos <- xpos_vec[[length(xpos_vec) - 1]]
 
+      
+      
+    }
+      
   } else {
 
     if(sort && prune)
-      clusterings <- .orderedStabilitySequence(clusterings, FALSE)
+      clusterings <- .orderedStabilityCollection(clusterings, FALSE)
 
     score_list <- lapply(clusterings, function(l) { l$scores} )
     name_vector <- sapply(clusterings, function(l) { l$K })
