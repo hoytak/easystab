@@ -1,3 +1,6 @@
+#'@useDynLib easystab
+
+
 StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
 
 
