@@ -97,9 +97,9 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
     clusterings[[1]] <- tp_clusterings
   }
   
-  list(is_list <- is_list,
-       clusterings <- clusterings,
-       n_points <- n_points)
+  list(is_list = is_list,
+       clusterings = clusterings,
+       n_points = n_points)
 }
 
 f_theta <- function(theta, clusterings, seed, n_baselines){
@@ -286,10 +286,12 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
     d <- dim(X)
-    K <- d[2]
+    K <- d[[2]]
+
+    print(K)
     
     confusion_matrix <- matrix(0, ncol = K, nrow = K)
-    stability_matrix <- matrix(0, ncol = d[1], nrow = K)
+    stability_matrix <- matrix(0, ncol = d[[1]], nrow = K)
     
     .Call('_calculateScores', scores, confusion_matrix, stability_matrix,
           t(X), d[1], d[2],
