@@ -291,7 +291,7 @@ void calculateScores(double * scores, double * confusion_matrix, double * _stabi
 
   // Get the first one
   _calc_stability_matrix(stability_matrix, src, n, K, beta, buffer);
-  const double dist_score = log_score(stab_buffer, labels, n, K);
+  const double dist_score = log_score(stability_matrix, labels, n, K);
 
   if(confusion_matrix != NULL) {
     // Now set up the confusion matrix
@@ -317,6 +317,7 @@ void calculateScores(double * scores, double * confusion_matrix, double * _stabi
   CheapRNG uniform_int(seed);
 
   vector<size_t> seeds(n_baselines);
+  vector<double> stab_buffer(n*K);
 
   generate(seeds.begin(), seeds.end(), uniform_int);
 

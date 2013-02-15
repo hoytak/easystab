@@ -52,7 +52,7 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
     is_list <- FALSE
 
     clusterings$dists <- as.matrix(clusterings$dists)
-    clusterings$labels <- checked_labels(clusterings FALSE)
+    clusterings$labels <- checked_labels(clusterings, FALSE)
 
     n_points <- nrow(clusterings$dists)
     
@@ -102,12 +102,14 @@ StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
        n_points <- n_points)
 }
 
-f_theta <- function(t, clusterings, seed, n_baselines){
+f_theta <- function(theta, clusterings, seed, n_baselines){
   score_total <- 0
   for(l in clusterings){
     X <- l$dists
+    labels <- l$labels
     d <- dim(X)
-    score_total <- score_total + .Call('_score', t(X), d[1], d[2], as.integer(seed), as.integer(n_baselines), t, FALSE, FALSE)
+    score_total <- score_total + .Call('_score', t(X), labels, d[1], d[2],
+                                       as.integer(seed), as.integer(n_baselines), theta, FALSE, FALSE)
   }
   -score_total
 }
@@ -153,6 +155,7 @@ f_theta <- function(t, clusterings, seed, n_baselines){
 #'@param n_baselines The number of random baseline matrices to use in computing the stability scores.  Increase this number to get more accuracy at the expense of speed.
 #'
 #'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}}
+#'@export
 getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
@@ -256,6 +259,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'print(stability_sequence)
 #'summary(stability_sequence)
 #'plot(stability_sequence)
+#'@export
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta = NULL, test_pvalue = 0.05){
 
   if(seed < 0){
@@ -444,6 +448,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'
 #'plot(stability, classes=yeast[,10])
 #'
+#'@export
 from.kmeans <- function(x, kmeans_output) {
 
   is_list <- TRUE
@@ -520,6 +525,7 @@ from.kmeans <- function(x, kmeans_output) {
 #'
 #' # Plot the most stable clustering.
 #' plot(stability_sequence$best, classes = iris[,"Species"])
+#'@export
 from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
 
   if(method != "average" & method != "median"){
@@ -554,6 +560,8 @@ from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "avera
 
 #' Print a brief summary of the stability of a clustering collection.
 #' 
+#'@method print StabilityCollection
+#'@export
 print.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
@@ -562,6 +570,10 @@ print.StabilityCollection <- function(clusterings) {
   
 }
 
+#'Print a detaild summary of the stability of a clustering collection.
+#'
+#'@method summary StabilityCollection
+#'@export
 summary.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
@@ -595,54 +607,75 @@ summary.StabilityCollection <- function(clusterings) {
 #'stability scores produced by perturbationStability as a sequence of box
 #'plots.
 #'
-## @param clusterings The output of \code{perturbationStablity} -- a
-## list of clusters with perturbation stability analyses.
-## Additionally, set the label attribute of a specific clustering in
-## order to change the corresponding label on the box plots. For
-## example, \code{clusterings[[5]]$label <- "Clust5"} sets the
-## displayed label of that clustering, overriding the generated
-## labels.  
-## 
-## @param sort Whether to sort the results in ascending order by the
-## number of clusters in the data, then by stability scores within the
-## clusters.  
-## 
-## @param prune If sort is TRUE, and multiple clusterings are given
-## for a specific number of clusters, then show only the most stable
-## one from each group.  For example, if there were three clusterings
-## in the collection that had 5 clusters, only the most stable of
-## those three would be displayed.
-## 
-## @param label.indices If \code{label.indices} is TRUE, then the
-## original indices from \code{clusterings} is included in the label
-## for each box plot; if FALSE, they are not included.  If
-## \code{label.indices} is NULL (default), then they are included only
-## if items in the graph are reordered.  Note that setting the
-## \code{label} attribute on the clusterings input overrides this.
-## 
-## \param color.best Color the best clustering with this cluster.
-## Ignored if NULL.
-
-plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, label.indices = NULL, color.best = "red"){
+#'@param clusterings The output of \code{perturbationStablity} -- a
+#'list of clusters with perturbation stability
+#'analyses. Additionally:
+#'
+#'Set the \code{label} attribute of a specific clustering in order to
+#'change the corresponding label on the box plots. For example,
+#'\code{clusterings[[5]]$label <- "Clust5"} sets the displayed label
+#'of that clustering, overriding the generated labels.
+#'
+#'Set the \code{color} attribute of a specific clustering in order to
+#'change the color of boxplot.  The default is to color the "best"
+#'one red, and the rest black (see \code{color.best} below).  This
+#'overrides this behavior.
+#'
+#'@param sort Whether to sort the results in ascending order by the
+#'number of clusters in the data, then by stability scores within the
+#'clusters.  
+#'
+#'@param prune If sort is TRUE, and multiple clusterings are given
+#'for a specific number of clusters, then show only the most stable
+#'one from each group.  For example, if there were three clusterings
+#'in the collection that had 5 clusters, only the most stable of
+#'those three would be displayed.
+#'
+#'@param label.indices If \code{label.indices} is TRUE, then the
+#'original indices from \code{clusterings} is included in the label
+#'for each box plot; if FALSE, they are not included.  If
+#'\code{label.indices} is NULL (default), then they are included only
+#'if items in the graph are reordered.  Note that setting the
+#'\code{label} attribute on the clusterings input overrides this.
+#'
+#'@param ... Additional parameters passed to the boxplot function.
+#'See \code{\link{boxplot}} for more information.
+#'
+#'@param color.best Color the best clustering with this cluster.
+#'Ignored if NULL.
+#'
+#'@method plot StabilityCollection
+#'@export
+plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, label.indices = NULL, color.best = "red", ...){
 
   make.label <- function(cl, in_order) {
     if(!is.null(cl$label)) {
       return(cl$label)
     } else if(is.null(label.indices) && in_order) {
       return(sprintf("%d", cl$K))
-    } else if(label.indices) {
-      return(sprintf("%d,K=%d", cl$.original_index, cl$K))
+    } else if((is.null(label.indices) && !in_order) || label.indices) {
+      return(sprintf("%d (idx %d)", cl$K, cl$.original_index))
     } else {
       return(sprintf("%d", cl$K))
     }
   }
 
-  make_boxplot <- function(score_list, name_list, width_list) {
-    
-
-
+  get.color <- function(cl) {
+    if(!is.null(cl$color)) {
+      return(cl$color)
+    } else if(cl$.original_index == clusterings$estimated_index && !is.null(color.best)) {
+      return(color.best)
+    } else {
+      return("black")
+    }
   }
-
+  
+  ylab <- "Stability Score"
+  if(is.null(label.indices) || label.indices) {
+    xlab <- "# Clusters/Index"
+  } else {
+    xlab <- "# Clusters"
+  }
   
   if(sort && !prune) {
 
@@ -650,19 +683,36 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
 
     ## Test if everything is in order, and the sequence of 
     if(length(cl_K_list) == length(clusterings)) {
-      if(is.sorted(sapply(cl_K_list, function(cl) {cl$K}))) {
-        score_list <- lapply(clusterings, function(l) { l$scores} )
-        name_vector <- sapply(clusterings, function(l) { l$K } )
-        
-      }
-    }
-    xpos=1
-    for(cl_list in cl_K_list) {
-      xpos_vec <- c(xpos_vec, x_pos+(0:(length(cl_list) - 1))/2)
-      xpos <- xpos_vec[[length(xpos_vec) - 1]]
 
+      if(is.sorted(sapply(cl_K_list, function(cl) {cl$K}))) {
+        scores <- lapply(clusterings, function(cl) { cl$scores} )
+        colors <- lapply(clusterings, get.color)
+        names <- lapply(clusterings, function(cl) { make.label(cl, TRUE)})
+        xlab <- "# Clusters"
+      } else {
+        scores <- lapply(clusterings, function(cll) { cll[[1]]$scores } )
+        colors <- lapply(clusterings, function(cll) { get.color(cll[[1]]) } )
+        names <- lapply(cl_K_list, function(cll) { make.label(cll[[1]], FALSE)})
+      }
       
+      boxplot(scores, names = names, xlab = , ylab = ylab, col = colors, las=3,...)
       
+    } else {
+      
+      xpos=1
+      
+      for(cl_list in cl_K_list) {
+        xpos_vec <- c(xpos_vec, x_pos+(0:(length(cl_list) - 1))/2)
+        xpos     <- xpos_vec[[length(xpos_vec) - 1]]
+        scores   <- c(scores, lapply(cl_list, function(cl) {cl$scores}))
+        names    <- c(names, lapply(cl_list, function(cl) {make.label(cl, FALSE)}))
+        colors   <- c(colors, lapply(clusterings, get.color))
+      }
+      
+      widths <- rep(0.5, length(clusterings))
+
+      boxplot(scores, names = names, xlab = , ylab = ylab, widths = widths, 
+              col = colors, at=xpos_vec, las=3, ...)
     }
       
   } else {
@@ -670,18 +720,18 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
     if(sort && prune)
       clusterings <- .orderedStabilityCollection(clusterings, FALSE)
 
-    score_list <- lapply(clusterings, function(l) { l$scores} )
+    scores <- lapply(clusterings, function(l) { l$scores} )
     name_vector <- sapply(clusterings, function(l) { l$K })
     names(score_list) <- name_vector
+    
     boxplot(score_list, main = "Adjusted Log-Stability Scores", xlab = "Clustering", ylab = "Stability Score")
   }
-  
-
-  
 }
 
 #'Print a brief summary of the stability of an undividual clustering under perturbation. 
 #'
+#'@method print StabilityReport
+#'@export
 print.StabilityReport <- function(clustering) {
 
   cat(sprintf("Perturbation Stability Report:\n"))
@@ -697,6 +747,9 @@ print.StabilityReport <- function(clustering) {
 #'
 #' Print a summary of the stability of an undividual clustering under
 #' perturbation.  Summary includes individual cluster stabilites.
+#'
+#'@method summary StabilityReport
+#'@export
 summary.StabilityReport <- function(clustering) {
 
   print.StabilityReport(clustering)
@@ -744,6 +797,8 @@ summary.StabilityReport <- function(clustering) {
 #'
 #'@seealso \code{\link{easystab}}
 #'
+#'@method plot StabilityReport
+#'@export
 plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, Kmap_mode = 0){
 
   require(grDevices)
@@ -851,6 +906,7 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #'Z <- make2dStabilityImage(cen, theta=2, buffer=2)
 #'image(Z$x, Z$y, Z$stability)
 #'points(Z$centroids)
+#'@export
 make2dStabilityImage <- function(centroids, theta = 1, bounds = NULL, size=c(500,500), buffer = 0.25) {
 
   image_nx <- size[[1]]

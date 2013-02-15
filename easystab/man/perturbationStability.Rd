@@ -3,8 +3,7 @@
 \title{Calculate clustering perturbation stability.}
 \usage{
   perturbationStability(clusterings, n_baselines = 32,
-    seed = 0, Kmap_mode = 0, theta = NULL,
-    test_pvalue = 0.05)
+    seed = 0, theta = NULL, test_pvalue = 0.05)
 }
 \arguments{
   \item{clusterings}{A point-to-cluster distance matrix, a
@@ -29,11 +28,6 @@
   to use in computing the stability scores.  Increase this
   number to get more accuracy at the expense of speed.}
 
-  \item{Kmap_mode}{Whether to reorder the clusters in the
-  stability map image for aesthetic reasons.  0 (default)
-  means to not order them, 1 orders them by size, 2 orders
-  them by average stability.}
-
   \item{theta}{The log of the rate parameter passed to the
   shifted exponential prior on the perturbations.  The
   parameter indexes the strength of the perturbations, with
@@ -43,11 +37,11 @@
   \code{\link{getOptTheta}}.}
 }
 \value{
-  Returns an object of type StabilitySequence if a list of
-  clusterings is supplied, otherwise returns an object of
-  type StabilityReport.  A StabilitySequence is essentially
-  a list of StabilityReport objects corresponding to the
-  original list of clusterings.
+  Returns an object of type StabilityCollection if a list
+  of clusterings is supplied, otherwise returns an object
+  of type StabilityReport.  A StabilityCollection is
+  essentially a list of StabilityReport objects
+  corresponding to the original list of clusterings.
 
   A StabilityReport object contains the original
   \code{dists}, \code{labels} (possibly calculated), the

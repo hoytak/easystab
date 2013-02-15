@@ -2,8 +2,8 @@
 \alias{plot.StabilityReport}
 \title{Display the stability of a clustering as a heat map plot.}
 \usage{
-  plot.StabilityReport(clustering, classes = NULL,
-    class_colors = NULL)
+  \method{plot}{StabilityReport} (clustering,
+    classes = NULL, class_colors = NULL, Kmap_mode = 0)
 }
 \arguments{
   \item{clustering}{A StabilityReport object, as given by
@@ -19,6 +19,11 @@
   1,...,L, it must be a list of at least L colors. If NULL,
   \code{RColorBrewer} is used to choose representative
   colors. Ignored if \code{classes} is \code{NULL}.}
+
+  \item{Kmap_mode}{Whether to reorder the clusters in the
+  stability map image for aesthetic reasons.  0 (default)
+  means to not reorder them, 1 orders them by cluster size,
+  and 2 orders them by average stability.}
 }
 \description{
   Plots the stability of a clustering as a heat map plot,

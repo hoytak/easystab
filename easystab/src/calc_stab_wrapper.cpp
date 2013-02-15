@@ -53,7 +53,7 @@ extern "C" SEXP _sort_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_,
   for(int i=0; i<n; i++)
     labels[i] --;
 
-  sort_stability_matrix(dest, index_map, K_map, src, labels, n, K, beta, Kmap_mode);
+  sort_stability_matrix(dest, index_map, K_map, src, labels, n, K, Kmap_mode);
 
   for(int i=0; i<n; i++){
     labels[i] ++;
@@ -72,9 +72,10 @@ extern "C" SEXP _sort_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_,
   return retval;
 }
 
-extern "C" SEXP _score(SEXP dist_, SEXP n_, SEXP K_, SEXP seed_,
+extern "C" SEXP _score(SEXP dist_, SEXP labels_, SEXP n_, SEXP K_, SEXP seed_,
 		       SEXP n_baselines_, SEXP beta_, SEXP use_permutations_, SEXP by_dimension_){
   double * dist = REAL(dist_);
+  int * labels = INTEGER(labels_);
   int n = INTEGER(n_)[0];
   int K = INTEGER(K_)[0];
   int seed = INTEGER(seed_)[0];
@@ -85,7 +86,14 @@ extern "C" SEXP _score(SEXP dist_, SEXP n_, SEXP K_, SEXP seed_,
   
   SEXP retval;
 
-  double res = score(dist, n, K, seed, n_baselines, beta, use_permutations, by_dimension);
+  for(int i=0; i<n; i++)
+    labels[i] --;
+
+  double res = score(dist, labels, n, K, seed, n_baselines, beta, 
+		     use_permutations, by_dimension);
+
+  for(int i=0; i<n; i++)
+    labels[i] ++;
 
   PROTECT(retval = NEW_NUMERIC(1));
   REAL(retval)[0] = res;
