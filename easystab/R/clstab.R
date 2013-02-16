@@ -1,8 +1,7 @@
 #'@useDynLib easystab
 
 
-StabilityColorMap <- colorRampPalette(c("black","red", "yellow", "white"))(512)
-
+StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow", "white"))(512)}
 
 .processListOfClusterings <- function(clusterings) {
   ## Test whether a list of clusterings is actually a list of
@@ -224,12 +223,12 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'
 #'@examples
 #'## Toy example using a simple mixture model
-#'cen <- matrix(c(0,0,1,2,-1,0.5), ncol=2)
+#'cen <- matrix(c(0,-2,2,2,-2,1), ncol=2, byrow=TRUE)
 #'
 #'## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
-#'X <- t(cbind(rbind(rnorm(100,mean=cen[[1,1]],sd=1),rnorm(100,mean=cen[[1,2]],sd=1)),
-#'             rbind(rnorm(100,mean=cen[[2,1]],sd=2),rnorm(100,mean=cen[[2,2]],sd=2)),
-#'             rbind(rnorm(100,mean=cen[[3,1]],sd=1),rnorm(100,mean=cen[[3,2]],sd=1))))
+#'X <- t(cbind(rbind(rnorm(100,mean=cen[[1,1]]),rnorm(100,mean=cen[[1,2]])),
+#'             rbind(rnorm(100,mean=cen[[2,1]]),rnorm(100,mean=cen[[2,2]])),
+#'             rbind(rnorm(100,mean=cen[[3,1]]),rnorm(100,mean=cen[[3,2]]))))
 #'
 #'dists  <- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
 #'labels <- c(rep(1,100), rep(2,100), rep(3,100))
@@ -290,14 +289,12 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     X <- l$dists
     d <- dim(X)
     K <- d[[2]]
-
-    print(K)
     
     confusion_matrix <- matrix(0, ncol = K, nrow = K)
     stability_matrix <- matrix(0, ncol = d[[1]], nrow = K)
-    
+
     .Call('_calculateScores', scores, confusion_matrix, stability_matrix,
-          t(X), d[1], d[2],
+          t(X), l$labels, d[1], d[2],
           as.integer(seed), as.integer(n_baselines), opt_theta, FALSE, FALSE)
     
     l$K <- K
@@ -305,11 +302,14 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     l$stability_quantiles <- as.vector(quantile(scores, prob=c(0.025, 0.05, 0.95, 0.975), names=FALSE))
     l$scores <- scores
 
-    l$confusion_matrix <- confusion_matrix
-    l$stability_matrix <- stability_matrix
+    l$confusion_matrix <- t(confusion_matrix)
+    l$stability_matrix <- t(stability_matrix)
     l$theta <- opt_theta
 
     class(l) <- "StabilityReport"
+
+    print(l$stability_matrix)
+    print(opt_theta)
 
     clusterings[[idx]] <- l
   }
@@ -739,10 +739,10 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
 #'@export
 print.StabilityReport <- function(clustering) {
 
-  cat(sprintf("Perturbation Stability Report:\n"))
+  cat(sprintf("\nPerturbation Stability Report:\n"))
   cat(sprintf("  %d data points grouped into %d clusters.\n",
-              dim(clustering$sorted_stability_matrix)[1], dim(clustering$K)))
-  cat(sprintf("  Stability score = %f; 95%% confidence interval = [%f, %f].",
+              nrow(clustering$dists), clustering$K))
+  cat(sprintf("  Stability score = %f\n  95%% confidence interval = [%f, %f].\n\n",
               clustering$stability,
               clustering$stability_quantiles[[1]],
               clustering$stability_quantiles[[4]]))
@@ -758,19 +758,26 @@ print.StabilityReport <- function(clustering) {
 summary.StabilityReport <- function(clustering) {
 
   print.StabilityReport(clustering)
+
+  cat(sprintf("Stability of Each Cluster Under Perturbation:\n\n"))
+
+  K <- clustering$K
+  C <- clustering$confusion_matrix
+  X <- data.frame(C)
+
+  colnames(X) <- lapply(1:K, function(k) {sprintf("--> %d", k)})
+
+  Y <- data.frame(matrix(0,nrow=K,ncol=3))
+  colnames(Y) <- c("Size", "Score", " ")
   
-  cat(sprintf("Stability of Each Cluster Under Perturbation:\n"))
-  cat(sprintf("  (Each row gives the average membership probabilties under perturbation for data in that cluster.)\n"))
+  for(idx in 1:K) {
+    Y[[idx, "Size"]] <- sum(clustering$labels == idx)
+    Y[[idx, "Score"]] <- C[[idx, idx]]
+    Y[[idx, " "]] <- " "
+  }
 
-  X <- data.frame(clustering$confusion_matrix)
-
-  colnames <- list()
-  for(ki in 1:ncol(X)) 
-    colnames[[ki]] <- sprintf("--> %d", ki)
-
-  col.names(X) <- colnames
-  
-  print(X)
+  print(cbind(Y, X), digits=3)
+  cat(sprintf("\n  (Each row gives the average membership probabilties \n   under perturbation for data in that cluster.)\n\n"))
 }
 
 #'Display the stability of a clustering as a heat map plot.
@@ -809,55 +816,55 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
   require(grDevices)
   require(plotrix)
 
-  d <- dim(clustering$stability_matrix)
-  sorted_stability_matrix <- -matrix(1, ncol = d[1], nrow = d[2])
-  index_map <- rep(as.integer(NA), times=d[1])
-  K_map <- rep(as.integer(NA), d[2])
+  n <- nrow(clustering$stability_matrix)
+  K <- ncol(clustering$stability_matrix)
+  sorted_stability_matrix <- matrix(-1, ncol = n, nrow = K)
+  index_map <- rep(as.integer(NA), n)
+  K_map <- rep(as.integer(NA), K)
   labels <- clustering$labels
 
   .Call('_sort_stability_matrix', sorted_stability_matrix, index_map, K_map,
-        clustering$stability_matrix, labels,
-        d[1], d[2], opt_theta, as.integer(Kmap_mode))
+        t(clustering$stability_matrix), labels,
+        n, K, as.integer(Kmap_mode))
 
-  nrow <- dim(sorted_stability_matrix)[1]
-  ncol <- dim(sorted_stability_matrix)[2]
-
+  sorted_stability_matrix <- t(sorted_stability_matrix)
+  
   color_func <- colorRampPalette(c("black","red", "yellow", "white"))
   color_map <-  color_func(512)
-
-  mi <- min(sorted_stability_matrix)
-  ma <- max(sorted_stability_matrix)
   
-  matrix_colors <- apply(sorted_stability_matrix, 1:2, function(x) color_map[as.integer((x-mi)*511/(ma-mi))+1])
+  matrix_colors <- apply(sorted_stability_matrix, 1:2, function(x) color_map[as.integer(x*511)+1])
 
   if(is.null(classes)) {
     
     color2D.matplot(sorted_stability_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
-    axis(3, at=0.5:(ncol-0.5), labels=1:ncol)
+    axis(3, at=0.5:(n-0.5), labels=1:n)
     
   } else {
-    labels <- as.integer(classes)
+    classes <- as.integer(classes)
+    n_classes <- max(classes)
 
-    index_map <- clustering$sorted_stability_matrix_index_map
-
+    if(length(classes) != n)
+      stop("Length of supplied classes does not match the number of data points.")
+    
     if(is.null(class_colors)){
       require(RColorBrewer)
-      label_colors <- brewer.pal(max(labels), "Set3")
+      label_colors <- brewer.pal(n_classes, "Set3")
     }else{
       label_colors <- class_colors
     }
   
-    label_column_colors <- rep(0, times = nrow)
-  
-    for(idx in 1:nrow){
-      label_column_colors[idx] <- label_colors[labels[index_map[idx]]]
+    label_column_colors <- rep(0, n_classes)
+
+    print(index_map)
+    
+    for(idx in 1:n) {
+      label_column_colors[[idx]] <- label_colors[[classes[index_map[idx]]]]
     }
 
     matrix_colors <- cbind(matrix_colors, label_column_colors)
-    extended_matrix <- cbind(sorted_stability_matrix, labels)
+    extended_matrix <- cbind(sorted_stability_matrix, classes)
     color2D.matplot(extended_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
-    axis(1, at=0.5:(ncol+0.5), labels = c(1:ncol, 'C'))
-
+    axis(1, at=0.5:(ncol+0.5), classes = c(1:ncol, 'C'))
   }
 }
 
@@ -934,7 +941,7 @@ make2dStabilityImage <- function(centroids, theta = 1, bounds = NULL, size=c(500
   yvec <- rep(as.numeric(NA), times = as.integer(image_ny))
   .Call('_make_stability_image', stab_image, as.integer(image_nx), as.integer(image_ny),
         image_x_lower, image_x_upper, image_y_lower, image_y_upper,
-        t(centroids), nrow(centroids), theta, xvec, yvec, as.double(buffer))
+        t(centroids), nrow(centroids), as.double(theta), xvec, yvec, as.double(buffer))
   
   list(stability = stab_image,
        bounds = c(xvec[[1]], xvec[[size[[1]] ]], yvec[[1]], yvec[[size[[2]] ]]),

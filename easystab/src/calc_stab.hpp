@@ -31,7 +31,7 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
 			    size_t n, size_t K, double beta, 
 			    Buffers& buffer) {
 
-  const double eps = 1e-32;
+  const double eps = 1e-8;
 
   for(size_t i = 0; i < n; ++i) {
     vector<IdxPair>& d = buffer.d;
@@ -84,7 +84,7 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
     for(size_t k = 1; k < K; ++k)  {
       B[k] = B[k-1] + 1. / (d[k].value + eps);
       C[k] = k - d[k].value * B[k-1];
-      D[k] = exp(exp(-beta)*C[k]);
+      D[k] = exp(-exp(beta)*C[k]);
       G[k] = D[k] / B[k];
     }
 
@@ -94,9 +94,8 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
       E[k-1] = E[k] + D[k] / (B[k-1]*(d[k].value * B[k-1] + 1.));
 
     for(size_t k = 0; k < K; ++k)
-      dest[i*K + d[k].index] = min(double(1.0), 
-				   max(double(0), 
-				       double((G[k] - E[k]) / (d[k].value + eps))));
+      dest[i*K + d[k].index] = double((G[k] - E[k]) / (d[k].value + eps)); //));min(double(1.0), max(double(0), 
+				       
   }
 }
 
@@ -456,6 +455,19 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
       _calc_stability_matrix(s, X, 1, K, beta, buffer);
 
       stab_image[yi*image_nx + xi] = *max_element(s, s + K);
+    }
+  }
+
+  // Now, go through and set the pixels of the centroids to 1.
+
+  for(size_t k = 0; k < K; ++k) {
+    long xi = round( (centroids[2*k + 0] - start_x) / vx);
+    long yi = round( (centroids[2*k + 1] - start_y) / vy);
+
+    if(xi >= 0 && xi < long(image_nx) 
+       && yi >= 0 && yi < long(image_ny) ) {
+
+      stab_image[yi*image_nx + xi] = 1;
     }
   }
 

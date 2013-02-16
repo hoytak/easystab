@@ -38,7 +38,7 @@ extern "C" SEXP _make_stability_image(SEXP stab_image_, SEXP image_nx_, SEXP ima
 }
 
 extern "C" SEXP _sort_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_, SEXP src_, 
-				       SEXP labels_, SEXP n_, SEXP K_, SEXP beta_, SEXP Kmap_mode_){
+				       SEXP labels_, SEXP n_, SEXP K_, SEXP Kmap_mode_){
   double * dest = REAL(dest_);
   int * index_map = INTEGER(index_map_);
   int * K_map = INTEGER(K_map_);
@@ -46,7 +46,6 @@ extern "C" SEXP _sort_stability_matrix(SEXP dest_, SEXP index_map_, SEXP K_map_,
   int * labels = INTEGER(labels_);
   int n = INTEGER(n_)[0];
   int K = INTEGER(K_)[0];
-  double beta = REAL(beta_)[0];
   int Kmap_mode = INTEGER(Kmap_mode_)[0];
 
   // R array start with index 1, c++ starts with 0
