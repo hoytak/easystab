@@ -21,8 +21,8 @@ struct IdxPair {
 };
 
 struct Buffers {
-  Buffers(size_t K) : B(K), C(K), D(K), E(K), G(K), d(K) {}
-  vector<double> B, C, D, E, G;
+  Buffers(size_t K) : B(K), C(K), D(K), d(K) {}
+  vector<double> B, C, D;
   vector<IdxPair> d;
 };
 
@@ -34,13 +34,18 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
 
   const double beta_0d = max(0.0, exp(beta) - 1);
 
+  if(K == 1) {
+    for(size_t i = 0; i < n; ++i)
+      dest[i] = 1;
+    return;
+  }
+
+  vector<IdxPair>& d = buffer.d;
+  vector<double>& B = buffer.B;
+  vector<double>& C = buffer.C;
+  vector<double>& D = buffer.D;
+
   for(size_t i = 0; i < n; ++i) {
-    vector<IdxPair>& d = buffer.d;
-    vector<double>& B = buffer.B;
-    vector<double>& C = buffer.C;
-    vector<double>& D = buffer.D;
-    vector<double>& E = buffer.E;
-    vector<double>& G = buffer.G;
 
     // First map them over
     double min_value = d[0].value;
@@ -84,30 +89,6 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
 
     for(size_t k = 0; k < K; ++k)
       dest[i*K + d[k].index] = (C[k] / B[k] - D[k]) / d[k].value;
-    
-
-    // Mu[0] = 0;
-    
-
-
-    // D[0] = 1;
-    // G[0] = d[0].value;
-
-    // for(size_t k = 1; k < K; ++k)  {
-    //   B[k] = B[k-1] + 1. / d[k].value;
-    //   C[k] = k - d[k].value * B[k-1];
-    //   D[k] = exp(beta_0d*C[k]);
-    //   G[k] = D[k] / B[k];
-    // }
-
-    // E[K-1] = 0;
-
-    // for(size_t k = K-1; k > 0; --k)
-    //   E[k-1] = E[k] + D[k] / (B[k-1]*(d[k].value * B[k-1] + 1.));
-
-    // for(size_t k = 0; k < K; ++k)
-    //   dest[i*K + d[k].index] = double((G[k] - E[k]) / d[k].value); //));min(double(1.0), max(double(0), 
-				       
   }
 }
 
