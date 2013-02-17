@@ -1,6 +1,5 @@
 #'@useDynLib easystab
 
-
 StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow", "white"))(512)}
 
 .processListOfClusterings <- function(clusterings) {
@@ -89,7 +88,7 @@ StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow
       }
       
       clusterings[[i]]$dists <- as.matrix(X)
-      clusterings$labels <- checked_labels(clusterings[[i]], suppress_label_conversion_warning)
+      clusterings[[i]]$labels <- checked_labels(clusterings[[i]], suppress_label_conversion_warning)
     }
   }
   
@@ -106,7 +105,8 @@ StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow
 
 f_theta <- function(theta, clusterings, seed, n_baselines){
   score_total <- 0
-  for(l in clusterings){
+  for(idx in 1:clusterings$n_clusterings){
+    l <- clusterings[[idx]]
     X <- l$dists
     labels <- l$labels
     d <- dim(X)
@@ -120,17 +120,20 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
 ## each K, and all in order
 .orderedStabilityCollection <- function(clusterings, as_list_of_lists) {
   
-  cl_K_list = list(1:max(sapply(clusterings, function(l){l$K})))
+  cl_K_list <- list()
 
-  for(idx in 1:length(clusterings)){
+  for(idx in 1:clusterings$n_clusterings){
     cl <- clusterings[[idx]]
     K <- cl$K
       
     cl$.original_index <- idx
-
+    
     if(as_list_of_lists)
       cl_K_list[[K]] <- c(cl_K_list[[K]], cl)
-    else if(is.null(cl_K_list[[K]]) || cl_K_list[[K]]$stability < cl$stability)
+    else if(length(cl_K_list) < K
+            ||  is.null(cl_K_list[[K]])
+            || cl_K_list[[K]]$stability < cl$stability)
+      
       cl_K_list[[K]] <- cl
   }
 
@@ -162,7 +165,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
   
-  res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001,
+  res <- optimize(f_theta, interval = c(0, 12), tol = 0.00001,
                   clusterings = clusterings, seed = seed, n_baselines = n_baselines)
   
   res$minimum
@@ -198,8 +201,10 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'in computing the stability scores.  Increase this number to get
 #'more accuracy at the expense of speed.
 #'
-#'@param theta The log of the rate parameter passed to the shifted
-#'exponential prior on the perturbations.  The parameter indexes
+#'@param theta The rate parameter passed to the shifted
+#'exponential prior on the perturbations.  \code{theta} must
+#'be non-negative; a warning is issued if \code{theta < 0}.
+#'The parameter indexes
 #'the strength of the perturbations, with smaller values
 #'translating into stronger perturbations.  If NULL, theta is
 #'chosen by optimizing the overall stability against the baseline
@@ -269,21 +274,29 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     return(NA)
   }
 
+  if(!is.null(theta) && theta < 0) {
+    warning("Theta parameter cannot be negative; clipping to 0.")
+    theta <- 0
+  }
+  
   cl_info <- .processListOfClusterings(clusterings)
 
   clusterings <- cl_info$clusterings
   is_list <- cl_info$is_list
   n_points <- cl_info$n_points
+
+  n_clusterings <- length(clusterings)
+  clusterings$n_clusterings <- n_clusterings
   
   if(is.null(theta)){
-    res <- optimize(f_theta, interval = c(-12, 12), tol = 0.00001,
+    res <- optimize(f_theta, interval = c(0, 5), tol = 0.00001,
                     clusterings = clusterings, seed = seed, n_baselines = n_baselines)
     opt_theta <- res$minimum
   } else {
     opt_theta <- theta
   }
-
-  for( idx in 1:length(clusterings)){
+  
+  for( idx in 1:n_clusterings){
     l <- clusterings[[idx]]
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
@@ -308,9 +321,6 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 
     class(l) <- "StabilityReport"
 
-    print(l$stability_matrix)
-    print(opt_theta)
-
     clusterings[[idx]] <- l
   }
 
@@ -329,7 +339,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 
       ## There isn't a most stable clustering; 
       clusterings$estimated_K <- as.integer(1)
-      clusterings$estimated_index <- as.integer(NA)
+      clusterings$best.index  <- NA
 
       ## Put a dummy clustering into the best slot
       l <- list()
@@ -367,7 +377,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     }
 
     clusterings$theta <- opt_theta
-    
+
     return(clusterings)
     
   } else {
@@ -376,7 +386,6 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     
   }
 }
-
 
 
 #'Adapts a single clustering, or list of clusterings, from \code{kmeans} to one usable by \code{perturbationStability}.
@@ -570,7 +579,7 @@ from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "avera
 print.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
-  cat(sprintf("  %d clusterings. \n", length(clusterings)))
+  cat(sprintf("  %d clusterings. \n", clusterings$n_clusterings))
   cat(sprintf("  Most stable clustering has %d clusters. \n", clusterings$estimated_K))
   
 }
@@ -582,22 +591,26 @@ print.StabilityCollection <- function(clusterings) {
 summary.StabilityCollection <- function(clusterings) {
 
   cat(sprintf("Perturbation Stability Sequence:\n"))
-  cat(sprintf("  %d clusterings. \n", length(clusterings)))
+  cat(sprintf("  %d clusterings. \n", clusterings$n_clusterings))
 
   # Create a data frame to dump out the information
   
-  X <- data.frame()
+  X <- data.frame(matrix(0,nrow=clusterings$n_clusterings,ncol=4))
+  colnames(X) <- c(" ", "K", "Score", "95% CI")
+
   
-  for(idx in 1:length(clusterings)) {
+  
+  for(idx in 1:clusterings$n_clusterings) {
     cl <- clusterings[[idx]]
-    if(idx == clusterings$estimated_index)
-      X[idx, " "] <- "BEST"
+
+    if(idx == clusterings$best.index)
+      X[[idx, " "]] <- "BEST"
     else
-      X[idx, " "] <- "    "
-    
-    X[idx, "K"] <- cl$K
-    X[idx, "Score"] <- cl$stability
-    X[idx, "95% CI"] <- sprintf("(%1.3f, %1.3f)",
+      X[[idx, " "]] <- "    "
+
+    X[[idx, "K"]] <- cl$K
+    X[[idx, "Score"]] <- cl$stability
+    X[[idx, "95% CI"]] <- sprintf("(%1.3f, %1.3f)",
                                 cl$stability_quantiles[[1]],
                                 cl$stability_quantiles[[4]])
   }
@@ -687,7 +700,7 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
     cl_K_list <- .orderedStabilityCollection(clusterings, TRUE)
 
     ## Test if everything is in order, and the sequence of 
-    if(length(cl_K_list) == length(clusterings)) {
+    if(length(cl_K_list) == clusterings$n_clusterings)) {
 
       if(is.sorted(sapply(cl_K_list, function(cl) {cl$K}))) {
         scores <- lapply(clusterings, function(cl) { cl$scores} )
@@ -739,10 +752,10 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
 #'@export
 print.StabilityReport <- function(clustering) {
 
-  cat(sprintf("\nPerturbation Stability Report:\n"))
+  cat(sprintf("Perturbation Stability Report:\n"))
   cat(sprintf("  %d data points grouped into %d clusters.\n",
               nrow(clustering$dists), clustering$K))
-  cat(sprintf("  Stability score = %f\n  95%% confidence interval = [%f, %f].\n\n",
+  cat(sprintf("  Stability score = %f\n  95%% confidence interval = [%f, %f].\n",
               clustering$stability,
               clustering$stability_quantiles[[1]],
               clustering$stability_quantiles[[4]]))
@@ -803,7 +816,7 @@ summary.StabilityReport <- function(clustering) {
 #'If NULL, \code{RColorBrewer} is used to choose representative colors.
 #'Ignored if \code{classes} is \code{NULL}.
 #'
-#'@param Kmap_mode Whether to reorder the clusters in the stability
+#'@param sort.clusters Whether to sort the clusters in the stability
 #'map image for aesthetic reasons.  0 (default) means to not reorder
 #'them, 1 orders them by cluster size, and 2 orders them by average stability.
 #'
@@ -811,7 +824,7 @@ summary.StabilityReport <- function(clustering) {
 #'
 #'@method plot StabilityReport
 #'@export
-plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, Kmap_mode = 0){
+plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, sort.clusters = 0){
 
   require(grDevices)
   require(plotrix)
@@ -825,7 +838,7 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 
   .Call('_sort_stability_matrix', sorted_stability_matrix, index_map, K_map,
         t(clustering$stability_matrix), labels,
-        n, K, as.integer(Kmap_mode))
+        n, K, as.integer(sort.clusters))
 
   sorted_stability_matrix <- t(sorted_stability_matrix)
   
@@ -855,8 +868,6 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
   
     label_column_colors <- rep(0, n_classes)
 
-    print(index_map)
-    
     for(idx in 1:n) {
       label_column_colors[[idx]] <- label_colors[[classes[index_map[idx]]]]
     }
@@ -864,7 +875,7 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
     matrix_colors <- cbind(matrix_colors, label_column_colors)
     extended_matrix <- cbind(sorted_stability_matrix, classes)
     color2D.matplot(extended_matrix, cellcolors=matrix_colors, border=NA, xlab=NA, ylab=NA, axes=FALSE)
-    axis(1, at=0.5:(ncol+0.5), classes = c(1:ncol, 'C'))
+    axis(1, at=0.5:(K+0.5), labels = c(1:K, 'C'))
   }
 }
 
@@ -881,11 +892,14 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #'@param centroids Array of 2D centroid points, given as a K by 2 array or
 #'matrix.
 #'
-#'@param theta The hyperparameter for the perturbation distribution
-#'of the prior.  This can be automatically computed by
-#'\code{\link{perturbationStability}} or \code{\link{getOptTheta}},
-#'or given manually.  Smaller values penalize points on the
-#'boundary regions more severely. 
+#'@param theta The rate parameter passed to the shifted
+#'exponential prior on the perturbations.  \code{theta} must
+#'be non-negative; a warning is issued if \code{theta < 0}.
+#'The parameter indexes
+#'the strength of the perturbations, with smaller values
+#'translating into stronger perturbations.  If NULL, theta is
+#'chosen by optimizing the overall stability against the baseline
+#'distributions as in \code{\link{getOptTheta}}.
 #'
 #'@param bounds The bounds of the image, given as a four element array of
 #'\code{c(x_min, x_max, y_min, y_max)}. If bounds is NULL, it is calculated
@@ -913,14 +927,30 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #'## Display the behavior of a set of centroids 
 #'library(easystab)
 #'
-#'cen <- matrix(c(0,-1,-2,2,0,1, 3,3), nrow=4, byrow=TRUE)
+#'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 #'
 #'Z <- make2dStabilityImage(cen, theta=2, buffer=2)
 #'image(Z$x, Z$y, Z$stability)
 #'points(Z$centroids)
+#'
+#'## Something more detailed
+#' 
+#' layout(matrix(1:9, ncol = 3, byrow=TRUE))
+#' for(i in 1:9) {
+#'   t <- (i - 1)/4
+#'   Z <- make2dStabilityImage(cen, theta=t, buffer=2)
+#'   image(Z$x, Z$y, Z$stability, main = sprintf("Theta = %1.2f.", t),
+#'         xlab = "x", ylab="y")
+#' }
+#' 
 #'@export
 make2dStabilityImage <- function(centroids, theta = 1, bounds = NULL, size=c(500,500), buffer = 0.25) {
 
+  if(!is.null(theta) && theta < 0) {
+    warning("Theta parameter cannot be negative; clipping to 0.")
+    theta <- 0
+  }
+  
   image_nx <- size[[1]]
   image_ny <- size[[2]]
 

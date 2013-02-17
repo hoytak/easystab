@@ -16,7 +16,7 @@ struct IdxPair {
   size_t index;
 
   bool operator<(const IdxPair& p) const {
-    return value > p.value;
+    return value < p.value;
   }
 };
 
@@ -26,12 +26,13 @@ struct Buffers {
   vector<IdxPair> d;
 };
 
+
 template <typename Array1, typename Array2>
 void _calc_stability_matrix(Array1& dest, const Array2& X, 
 			    size_t n, size_t K, double beta, 
 			    Buffers& buffer) {
 
-  const double eps = 1e-8;
+  const double beta_0d = max(0.0, exp(beta) - 1);
 
   for(size_t i = 0; i < n; ++i) {
     vector<IdxPair>& d = buffer.d;
@@ -42,59 +43,70 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
     vector<double>& G = buffer.G;
 
     // First map them over
-    double norm = 0;
+    double min_value = d[0].value;
 
     for(size_t k = 0; k < K; ++k) {
       double dv = X[i*K + k];
-      norm += dv*dv;
       d[k].value = max(dv, double(0));
       d[k].index = k;
+
+      min_value = min(min_value, d[k].value);
     }
 
-    if(norm == 0) {
-      for(size_t k = 0; k < K; ++k) {
-	dest[i*K + k] = 1.0 / K;
-      }
+    if(min_value == 0) {
+      size_t zero_count = 0;
+      for(size_t k = 0; k < K; ++k)
+	zero_count += ((d[k].value == 0) ? 1 : 0);
+
+      for(size_t k = 0; k < K; ++k)
+	dest[i*K + k] = (d[k].value == 0) ? (1.0 / zero_count) : 0;
+
       continue;
     }
-
-    for(vector<IdxPair>::iterator it = d.begin(); it != d.end(); ++it) {
-      it->value /= sqrt(norm);
-    }
+    
+    for(size_t k = 0; k < K; ++k)
+      d[k].value /= (min_value + 1e-32);
  
     sort(d.begin(), d.end()); // sorts in descending order by value
-    
-    if(d[0].value == 0 && d[1].value != 0) {
-      for(size_t k = 0; k < K; ++k)
-	dest[i*K + k] = 0;
-    
-      dest[i*K + d[0].index] = 1;
-      continue;
-    }    
 
-    for(vector<IdxPair>::iterator it = d.begin(); it != d.end(); ++it) {
-      it->value += eps;
+    B[0] = 1./d[0].value;
+    C[0] = 1.0;
+
+    for(size_t k = 1; k < K; ++k) {
+      B[k] = B[k-1] + 1.0 / d[k].value;
+      C[k] = exp(beta_0d * (k - d[k].value * B[k-1]));
     }
 
-
-    B[0] = 1./(d[0].value + eps);
-    D[0] = 1;
-    G[0] = d[0].value;
-
-    for(size_t k = 1; k < K; ++k)  {
-      B[k] = B[k-1] + 1. / (d[k].value + eps);
-      C[k] = k - d[k].value * B[k-1];
-      D[k] = exp(-exp(beta)*C[k]);
-      G[k] = D[k] / B[k];
-    }
-
-    E[K-1] = 0;
-
-    for(size_t k = K-1; k > 0; --k)
-      E[k-1] = E[k] + D[k] / (B[k-1]*(d[k].value * B[k-1] + 1.));
+    D[K-1] = 0;
+    
+    for(size_t k = K-1; k >= 1; --k)
+      D[k - 1] = D[k] + C[k] / (B[k-1]*(B[k-1]*d[k].value + 1) );
 
     for(size_t k = 0; k < K; ++k)
-      dest[i*K + d[k].index] = double((G[k] - E[k]) / (d[k].value + eps)); //));min(double(1.0), max(double(0), 
+      dest[i*K + d[k].index] = (C[k] / B[k] - D[k]) / d[k].value;
+    
+
+    // Mu[0] = 0;
+    
+
+
+    // D[0] = 1;
+    // G[0] = d[0].value;
+
+    // for(size_t k = 1; k < K; ++k)  {
+    //   B[k] = B[k-1] + 1. / d[k].value;
+    //   C[k] = k - d[k].value * B[k-1];
+    //   D[k] = exp(beta_0d*C[k]);
+    //   G[k] = D[k] / B[k];
+    // }
+
+    // E[K-1] = 0;
+
+    // for(size_t k = K-1; k > 0; --k)
+    //   E[k-1] = E[k] + D[k] / (B[k-1]*(d[k].value * B[k-1] + 1.));
+
+    // for(size_t k = 0; k < K; ++k)
+    //   dest[i*K + d[k].index] = double((G[k] - E[k]) / d[k].value); //));min(double(1.0), max(double(0), 
 				       
   }
 }
