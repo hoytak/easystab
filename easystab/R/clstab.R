@@ -128,21 +128,37 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
       
     cl$.original_index <- idx
     
-    if(as_list_of_lists)
-      cl_K_list[[K]] <- c(cl_K_list[[K]], cl)
+    if(as_list_of_lists) {
+      if(length(cl_K_list) < K) {
+        l <- list()
+        l[[1]] <- cl
+        cl_K_list[[K]] <- l
+      } else {
+        cl_K_list[[K]] <- c(cl_K_list[[K]], cl)
+      }
+      
+    }
     else if(length(cl_K_list) < K
             ||  is.null(cl_K_list[[K]])
-            || cl_K_list[[K]]$stability < cl$stability)
+            || cl_K_list[[K]]$stability < cl$stability) {
       
       cl_K_list[[K]] <- cl
+    }
   }
 
   cl_K_list <- Filter(Negate(is.null),  cl_K_list)
-
+  
   if(as_list_of_lists) {
     `>.StabilityReport` <- function(l1, l2) {  l1$score < l2$score }
     `==.StabilityReport` <- function(l1, l2) { l1$score == l2$score }
-    cl_K_list <- lapply(cl_K_list, sort)
+    cl_K_list <- lapply(cl_K_list,
+                        function(l)
+                        {
+                          if(length(l) == 1)
+                            return(l)
+                          else
+                            return(sort(l))
+                        })
   }
 
   cl_K_list
@@ -261,11 +277,11 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'  km_list[[k]] = kmeans(X, k, iter.max=50, nstart=100)
 #'
 #'cl_list <- from.kmeans(X, km_list)
-#'stability_sequence <- perturbationStability(cl_list)
+#'stability_collection <- perturbationStability(cl_list)
 #'
-#'print(stability_sequence)
-#'summary(stability_sequence)
-#'plot(stability_sequence)
+#'print(stability_collection)
+#'summary(stability_collection)
+#'plot(stability_collection)
 #'@export
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta = NULL, test_pvalue = 0.05){
 
@@ -417,13 +433,13 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'  km_list[[k]] = kmeans(X, k)
 #'}
 #'
-#'stability_sequence <- perturbationStability(from.kmeans(X, km_list))
+#'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'# plots the sequence
-#'plot(stability_sequence)
+#'plot(stability_collection)
 #'
 #'# plots the stability map of the 3 component case
-#'plot(stability_sequence[[3]], classes = iris[,"Species"])
+#'plot(stability_collection[[3]], classes = iris[,"Species"])
 #'
 #'############################################################
 #'## Example with kmeans clustering on yeast data set
@@ -442,11 +458,11 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'  km_list[[k]] = kmeans(X, k, iter.max = 50, nstart=50)
 #'}
 #'
-#'stability_sequence <- perturbationStability(from.kmeans(X, km_list)) 
+#'stability_collection <- perturbationStability(from.kmeans(X, km_list)) 
 #'
-#'print(stability_sequence)
+#'print(stability_collection)
 #'
-#'plot(stability_sequence)
+#'plot(stability_collection)
 #'
 #'############################################################
 #'## Example using from.kmeans on a single clustering
@@ -528,17 +544,17 @@ from.kmeans <- function(x, kmeans_output) {
 #' hc <- hclust(dx)
 #'
 #' cl_list <- from.hclust(dx, hc)
-#' stability_sequence <- perturbationStability(cl_list)
+#' stability_collection <- perturbationStability(cl_list)
 #'
 #' # Information about the stability sequence
-#' print(stability_sequence)
-#' summary(stability_sequence)
+#' print(stability_collection)
+#' summary(stability_collection)
 #'
 #' # Plot the stability sequence
-#' plot(stability_sequence)
+#' plot(stability_collection)
 #'
-#' # Plot the most stable clustering.
-#' plot(stability_sequence$best, classes = iris[,"Species"])
+#' # Plot a map of the most stable clustering.
+#' plot(stability_collection$best, classes = iris[,"Species"])
 #'@export
 from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
 
@@ -629,7 +645,7 @@ summary.StabilityCollection <- function(clusterings) {
 #'list of clusters with perturbation stability
 #'analyses. Additionally:
 #'
-#'Set the \code{label} attribute of a specific clustering in order to
+#'Set the \code{name} attribute of a specific clustering in order to
 #'change the corresponding label on the box plots. For example,
 #'\code{clusterings[[5]]$label <- "Clust5"} sets the displayed label
 #'of that clustering, overriding the generated labels.
@@ -664,24 +680,25 @@ summary.StabilityCollection <- function(clusterings) {
 #'
 #'@method plot StabilityCollection
 #'@export
-plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, label.indices = NULL, color.best = "red", ...){
+plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
+                                     label.indices = NULL, color.best = "red", ...){
 
   make.label <- function(cl, in_order) {
-    if(!is.null(cl$label)) {
-      return(cl$label)
+    if(!is.null(cl$name)) {
+      return(cl$name)
     } else if(is.null(label.indices) && in_order) {
       return(sprintf("%d", cl$K))
     } else if((is.null(label.indices) && !in_order) || label.indices) {
-      return(sprintf("%d (idx %d)", cl$K, cl$.original_index))
+      return(sprintf("%d (i=%d)", cl$K, cl$.original_index))
     } else {
       return(sprintf("%d", cl$K))
     }
   }
-
+  
   get.color <- function(cl) {
     if(!is.null(cl$color)) {
       return(cl$color)
-    } else if(cl$.original_index == clusterings$estimated_index && !is.null(color.best)) {
+    } else if(cl$.original_index == clusterings$best.index && !is.null(color.best)) {
       return(color.best)
     } else {
       return("black")
@@ -690,37 +707,50 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
   
   ylab <- "Stability Score"
   if(is.null(label.indices) || label.indices) {
+    rotate_xlab <- TRUE
     xlab <- "# Clusters/Index"
   } else {
+    rotate_xlab <- FALSE
     xlab <- "# Clusters"
   }
-  
+
   if(sort && !prune) {
 
     cl_K_list <- .orderedStabilityCollection(clusterings, TRUE)
 
-    ## Test if everything is in order, and the sequence of 
-    if(length(cl_K_list) == clusterings$n_clusterings)) {
+    ## TRUE if everything is in order, and the sequence of 
+    if(length(cl_K_list) == clusterings$n_clusterings) {
 
-      if(is.sorted(sapply(cl_K_list, function(cl) {cl$K}))) {
-        scores <- lapply(clusterings, function(cl) { cl$scores} )
-        colors <- lapply(clusterings, get.color)
-        names <- lapply(clusterings, function(cl) { make.label(cl, TRUE)})
+      L1 <- lapply(cl_K_list, function(cl) { cl[[1]]$K } )
+      L2 <- clusterings[[1]]$K:(clusterings[[clusterings$n_clusterings]]$K)
+      
+      scores <- lapply(cl_K_list, function(cll) { cll[[1]]$scores})
+      colors <- lapply(cl_K_list, function(cll) { get.color(cll[[1]])})
+
+      if(length(L1) == length(L2) && all(L1 == L2)) {
+        include_index <- TRUE
         xlab <- "# Clusters"
+        rotate_xlab <- FALSE
       } else {
-        scores <- lapply(clusterings, function(cll) { cll[[1]]$scores } )
-        colors <- lapply(clusterings, function(cll) { get.color(cll[[1]]) } )
-        names <- lapply(cl_K_list, function(cll) { make.label(cll[[1]], FALSE)})
+        include_index <- FALSE
       }
+          
+      names <- lapply(cl_K_list,
+                      function(cll) { make.label(cll[[1]], include_index)})
+
+      print(1)
+      print(names)
       
-      boxplot(scores, names = names, xlab = , ylab = ylab, col = colors, las=3,...)
-      
+      boxplot(scores, names = names, xlab = xlab, ylab = ylab,
+              col = colors, las=ifelse(rotate_xlab,3,0), ...)
+    
     } else {
       
-      xpos=1
+      xpos <- 1
+      xpos_vec <- NULL
       
       for(cl_list in cl_K_list) {
-        xpos_vec <- c(xpos_vec, x_pos+(0:(length(cl_list) - 1))/2)
+        xpos_vec <- c(xpos_vec, xpos+(0:(length(cl_list) - 1))/2)
         xpos     <- xpos_vec[[length(xpos_vec) - 1]]
         scores   <- c(scores, lapply(cl_list, function(cl) {cl$scores}))
         names    <- c(names, lapply(cl_list, function(cl) {make.label(cl, FALSE)}))
@@ -728,21 +758,26 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE, la
       }
       
       widths <- rep(0.5, length(clusterings))
-
-      boxplot(scores, names = names, xlab = , ylab = ylab, widths = widths, 
-              col = colors, at=xpos_vec, las=3, ...)
-    }
       
-  } else {
+      print(2)
+      print(scores)
 
+      boxplot(scores, names = names, xlab = , ylab = ylab, width = widths, 
+              col = colors, at=xpos_vec, las=ifelse(rotate_xlab,3,0),, ...)
+    }
+  } else {
+      
     if(sort && prune)
       clusterings <- .orderedStabilityCollection(clusterings, FALSE)
-
+    
     scores <- lapply(clusterings, function(l) { l$scores} )
     name_vector <- sapply(clusterings, function(l) { l$K })
     names(score_list) <- name_vector
+
+    print(3)
+    print(scores)
     
-    boxplot(score_list, main = "Adjusted Log-Stability Scores", xlab = "Clustering", ylab = "Stability Score")
+    boxplot(scores, main = "Adjusted Log-Stability Scores", xlab = "Clustering", ylab = "Stability Score")
   }
 }
 
