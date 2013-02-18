@@ -81,10 +81,10 @@ breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/b
 
 X <- breast[,-c(1,2)]
 
-dx <- as.dist(cosine(t(X)))
-hc <- hclust(dx, "ward")
+dx <- as.dist(cor(t(X)))
+hc <- hclust(dx)
 
-cl_list <- from.hclust(dist(scale(X)), hc)
+cl_list <- from.hclust(dx, hc,k=1:50)
 stability_collection <- perturbationStability(cl_list)
 
 # Information about the stability sequence
