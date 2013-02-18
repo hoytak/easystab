@@ -29,14 +29,9 @@
 
 library(easystab)
 
-X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
-km_list = list()
-
-for(k in 1:10) {
- km_list[[k]] = kmeans(X, k)
-}
-
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 # plots the sequence
@@ -50,23 +45,18 @@ plot(stability_collection[[3]], classes = iris[,"Species"])
 
 yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 
-X <- yeast[,-c(1,10)]
+X <- scale(yeast[,-c(1,10)])
 
-# Sphere the data -- gives better results with the yeast data set
-X <- scale(X)
-s <- svd(t(X))
-X <- t(diag(1.0 / sqrt(s$d)) \%*\% t(s$u) \%*\% t(X))
-
-km_list = list()
-for(k in 1:12) {
- km_list[[k]] = kmeans(X, k, iter.max = 50, nstart=50)
-}
-
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
-
+ 
+## Plot the whole stability collection 
 plot(stability_collection)
+
+## Plot the best class
+plot(stability_collection$best, classes = yeast[,10])
 
 ############################################################
 ## Example using from.kmeans on a single clustering

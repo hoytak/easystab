@@ -142,17 +142,20 @@ extern "C" SEXP _calculateAverageLinkageDistances(SEXP _dists, SEXP _labels, SEX
   double *dists = REAL(_dists);
   size_t n = INTEGER(_n)[0];
 
-  int * labels = new int[n];
-  for (int i = 0; i<n; i++)
-    labels[i] = INTEGER(_labels)[i]-1;
+  int * labels = INTEGER(_labels);
 
   size_t K = INTEGER(_K)[0];
 
   double * src_dists = REAL(_src_dists);
-  
+
+  for(int i=0; i<n; i++)
+    labels[i] --;
+
   calculateAverageLinkageDistances(dists, labels, n, K, src_dists);
 
-  delete [] labels;
+  for(int i=0; i<n; i++){
+    labels[i] ++;
+  }
 
   SEXP retval;
   PROTECT(retval = NEW_INTEGER(1));

@@ -143,7 +143,7 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
     }
   }
   
-  # cl_K_list <- Filter(Negate(is.null),  cl_K_list)
+  cl_K_list <- Filter(Negate(is.null),  cl_K_list)
 
   if(as_list_of_lists) {
     sort_on_score <- function(cll) {
@@ -221,9 +221,10 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'
 #'@param test.pvalue When selecting the best clustering among candidates
 #'with a differing number of clusters, a one-sided t-test is performed
-#'to choose the clustering having the least number of clusters and
-#'statistically indistinguishable from the one with the highest score.
-#'This gives the required p-value of this t-test.
+#'to choose the clustering having the smallest number of clusters and
+#'statistically indistinguishable from the clustering with the highest
+#'score. This is the level at which this t-test indicates that two stability
+#'scores are statistically indistinguishable.
 #'
 #'@return Returns an object of type StabilityCollection if a list of
 #'clusterings is supplied, otherwise returns an object of type
@@ -346,7 +347,8 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     cl_K_list <- .orderedStabilityCollection(clusterings, FALSE)
     
     ## Get the most stable one.
-    stability_vector <- sapply(cl_K_list, function(l) { l$stability } )
+    stability_vector <- sapply(cl_K_list, function(l) { print(l$stability)
+                                                        l$stability } )
     e_idx <- which.max(stability_vector)
     
     ## See if there is not actually a most stable clustering. 
@@ -424,44 +426,34 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'
 #'library(easystab)
 #'
-#'X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+#'X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 #'
-#'km_list = list()
-#'
-#'for(k in 1:10) {
-#'  km_list[[k]] = kmeans(X, k)
-#'}
-#'
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'# plots the sequence
 #'plot(stability_collection)
 #'
-#'# plots the stability map of the 3 component case
+#'## plots the stability map of the 3 component case
 #'plot(stability_collection[[3]], classes = iris[,"Species"])
 #'
 #'############################################################
 #'## Example with kmeans clustering on yeast data set
 #'
-#'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data") 
+#'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 #'
-#'X <- yeast[,-c(1,10)]
+#'X <- scale(yeast[,-c(1,10)])
 #'
-#'# Sphere the data -- gives better results with the yeast data set
-#'X <- scale(X)
-#'s <- svd(t(X))
-#'X <- t(diag(1.0 / sqrt(s$d)) %*% t(s$u) %*% t(X))
-#'
-#'km_list = list() 
-#'for(k in 1:12) {
-#'  km_list[[k]] = kmeans(X, k, iter.max = 50, nstart=50)
-#'}
-#'
-#'stability_collection <- perturbationStability(from.kmeans(X, km_list)) 
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+#'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'print(stability_collection)
 #'
+#'## Plot the whole stability collection 
 #'plot(stability_collection)
+#'
+#' ## Plot the best class
+#'plot(stability_collection$best, classes = yeast[,10])
 #'
 #'############################################################
 #'## Example using from.kmeans on a single clustering
@@ -476,7 +468,6 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'## stability map plot.
 #'
 #'plot(stability, classes=yeast[,10])
-#'
 #'@export
 from.kmeans <- function(x, kmeans_output) {
 
@@ -515,9 +506,8 @@ from.kmeans <- function(x, kmeans_output) {
 #'
 #'@param hc Hierarchical clustering as produced by \code{hclust}.
 #'
-#'@param clsnum_min Minimum cluster number (default 1).
-#'
-#'@param clsnum_max Maximum cluster number (default 10).
+#'@param k A list giving the numbers of clusters to cut the tree at;
+#'this is passed to \code{\link{\cutree}}.  Defaults to 1:10.
 #'
 #'@param method Method used to calculate the point-to-cluster distances from
 #'the point-to-point distance matrix \code{dx} given.  Currently, the two
@@ -530,7 +520,7 @@ from.kmeans <- function(x, kmeans_output) {
 #'\code{perturbationStability}.
 #'
 #'@seealso \code{\link{easystab}}, \code{\link{perturbationStability}},
-#'\code{\link{clusterings_from_kmeans}}
+#'\code{\link{from.kmeans}}
 #'
 #'@examples
 #' ############################################################
@@ -555,26 +545,23 @@ from.kmeans <- function(x, kmeans_output) {
 #' # Plot a map of the most stable clustering.
 #' plot(stability_collection$best, classes = iris[,"Species"])
 #'@export
-from.hclust <- function(dx, hc, clsnum_min = 1, clsnum_max = 10, method = "average"){
+from.hclust <- function(dx, hc, k=1:10, method = "average") {
 
   if(method != "average" & method != "median"){
     warning("only average and median methods are supported")
     return(NA);
   }
-
-  dx <- as.matrix(dx)
+  klist <- k
+  dx <- as.vector(as.dist(dx))
+  n <- as.integer((sqrt(1 + 8*length(dx)) + 1) / 2)
+  res <- cutree(hc, k=klist)
   
-  n <- nrow(dx)
-  
-  if(n<clsnum_max){
-    clsnum_max <- n
-  }
-  res <- cutree(hc, k=clsnum_min:clsnum_max)
   clusterings <- list()
-  clsnum_min <- as.integer(clsnum_min)
-  clsnum_max <- as.integer(clsnum_max)
-  for(K in clsnum_min:clsnum_max){
-    labels <- as.vector(res[,K-clsnum_min+1])
+
+  for(i in 1:length(klist)) {
+    K <- klist[[i]]
+    labels <- as.vector(res[,i])
+    
     dist_matrix <- matrix(as.numeric(NA), ncol = n, nrow = K)
     if(method == "average"){
       .Call('_calculateAverageLinkageDistances', dist_matrix, labels, n, K, dx)
@@ -618,7 +605,7 @@ summary.StabilityCollection <- function(clusterings) {
   for(idx in 1:clusterings$n_clusterings) {
     cl <- clusterings[[idx]]
 
-    if(idx == clusterings$best.index)
+    if(!is.na(clusterings$best.index) && idx == clusterings$best.index)
       X[[idx, " "]] <- "BEST"
     else
       X[[idx, " "]] <- "    "
@@ -946,7 +933,8 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
     n_classes <- max(classes)
 
     if(length(classes) != n)
-      stop("Length of supplied classes does not match the number of data points.")
+      stop(sprintf("Length of supplied classes (%d) does not match the number of data points (%d).",
+                   length(classes), n))
     
     if(is.null(class_colors)){
       require(RColorBrewer)

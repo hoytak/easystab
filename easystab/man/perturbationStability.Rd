@@ -36,6 +36,15 @@
   stronger perturbations.  If NULL, theta is chosen by
   optimizing the overall stability against the baseline
   distributions as in \code{\link{getOptTheta}}.}
+
+  \item{test.pvalue}{When selecting the best clustering
+  among candidates with a differing number of clusters, a
+  one-sided t-test is performed to choose the clustering
+  having the smallest number of clusters and statistically
+  indistinguishable from the clustering with the highest
+  score. This is the level at which this t-test indicates
+  that two stability scores are statistically
+  indistinguishable.}
 }
 \value{
   Returns an object of type StabilityCollection if a list

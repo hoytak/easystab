@@ -36,16 +36,55 @@
   about the behavior of the hierarchical clustering tree.
 }
 \examples{
+
 ############################################################
 ## Interfacing with the hierarchical clustering method
 library(easystab)
 
-X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+## Generate a fake dataset with 3 clusters
+cen <- matrix(c(0,-20,10,20,-20,10), ncol=2, byrow=TRUE)
+cl.size <- 100
+X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
 
-dx <- dist(scale(X))
+dx <- dist(X)
 hc <- hclust(dx)
+cl_list <- from.hclust(dx,hc)
 
-cl_list <- from.hclust(dx, hc)
+stability_collection <- perturbationStability(cl_list)
+
+# Information about the stability sequence
+print(stability_collection)
+summary(stability_collection)
+
+# Plot the stability sequence
+plot(stability_collection)
+
+## Ways to display information
+print(stability1)
+summary(stability1)
+plot(stability1, classes=labels)
+
+
+
+
+
+
+
+
+
+
+library(lsa)
+
+breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",sep=",")
+
+X <- breast[,-c(1,2)]
+
+dx <- as.dist(cosine(t(X)))
+hc <- hclust(dx, "ward")
+
+cl_list <- from.hclust(dist(scale(X)), hc)
 stability_collection <- perturbationStability(cl_list)
 
 # Information about the stability sequence
@@ -56,11 +95,11 @@ summary(stability_collection)
 plot(stability_collection)
 
 # Plot a map of the most stable clustering.
-plot(stability_collection$best, classes = iris[,"Species"])
+plot(stability_collection$best, classes = breast[,2])
 }
 \seealso{
   \code{\link{easystab}},
   \code{\link{perturbationStability}},
-  \code{\link{clusterings_from_kmeans}}
+  \code{\link{}}
 }
 
