@@ -28,13 +28,14 @@
   to use in computing the stability scores.  Increase this
   number to get more accuracy at the expense of speed.}
 
-  \item{theta}{The log of the rate parameter passed to the
-  shifted exponential prior on the perturbations.  The
-  parameter indexes the strength of the perturbations, with
-  smaller values translating into stronger perturbations.
-  If NULL, theta is chosen by optimizing the overall
-  stability against the baseline distributions as in
-  \code{\link{getOptTheta}}.}
+  \item{theta}{The rate parameter passed to the shifted
+  exponential prior on the perturbations.  \code{theta}
+  must be non-negative; a warning is issued if \code{theta
+  < 0}. The parameter indexes the strength of the
+  perturbations, with smaller values translating into
+  stronger perturbations.  If NULL, theta is chosen by
+  optimizing the overall stability against the baseline
+  distributions as in \code{\link{getOptTheta}}.}
 }
 \value{
   Returns an object of type StabilityCollection if a list
@@ -66,14 +67,12 @@
   final stability score.
 }
 \examples{
-## Toy example using a simple mixture model
-cen <- matrix(c(0,0,1,2,-1,0.5), ncol=2)
-
-## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
-X <- t(cbind(rbind(rnorm(100,mean=cen[[1,1]],sd=1),rnorm(100,mean=cen[[1,2]],sd=1)),
-            rbind(rnorm(100,mean=cen[[2,1]],sd=2),rnorm(100,mean=cen[[2,2]],sd=2)),
-            rbind(rnorm(100,mean=cen[[3,1]],sd=1),rnorm(100,mean=cen[[3,2]],sd=1))))
-
+## Generate a fake dataset with 3 clusters
+cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+cl.size <- 100
+X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
 dists  <- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
 labels <- c(rep(1,100), rep(2,100), rep(3,100))
 
@@ -100,10 +99,10 @@ for(k in 1:8)
  km_list[[k]] = kmeans(X, k, iter.max=50, nstart=100)
 
 cl_list <- from.kmeans(X, km_list)
-stability_sequence <- perturbationStability(cl_list)
+stability_collection <- perturbationStability(cl_list)
 
-print(stability_sequence)
-summary(stability_sequence)
-plot(stability_sequence)
+print(stability_collection)
+summary(stability_collection)
+plot(stability_collection)
 }
 

@@ -4,19 +4,18 @@
 box plots.}
 \usage{
   \method{plot}{StabilityCollection} (clusterings,
-    sort = TRUE, prune = FALSE, label.indices = NULL,
-    color.best = "red", ...)
+    sort = TRUE, prune = FALSE, label.indices = NULL, ...)
 }
 \arguments{
   \item{clusterings}{The output of
   \code{perturbationStablity} -- a list of clusters with
   perturbation stability analyses. Additionally:
 
-  Set the \code{label} attribute of a specific clustering
-  in order to change the corresponding label on the box
-  plots. For example, \code{clusterings[[5]]$label <-
-  "Clust5"} sets the displayed label of that clustering,
-  overriding the generated labels.
+  Set the \code{name} attribute of a specific clustering in
+  order to change the corresponding label on the box plots.
+  For example, \code{clusterings[[5]]$label <- "Clust5"}
+  sets the displayed label of that clustering, overriding
+  the generated labels.
 
   Set the \code{color} attribute of a specific clustering
   in order to change the color of boxplot.  The default is
@@ -45,14 +44,44 @@ box plots.}
   \item{...}{Additional parameters passed to the boxplot
   function. See \code{\link{boxplot}} for more
   information.}
-
-  \item{color.best}{Color the best clustering with this
-  cluster. Ignored if NULL.}
 }
 \description{
   Summary display of the output of the
   perturbationStability function. Plot the stability scores
   produced by perturbationStability as a sequence of box
   plots.
+}
+\examples{
+## Generate a fake dataset with 3 clusters
+cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+cl.size <- 100
+X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
+
+
+## Now try a range of numbers of clusters using kmeans
+km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=50, nstart=100)})
+stabilities1 <- perturbationStability(from.kmeans(X, km_list1))
+
+plot(stabilities1)
+
+## Now plot each K with multiple runs of the clustering function.
+## Now try several numbers of clusters using kmeans
+km_list2 <- lapply(0:17, function(k) { kmeans(X, 1 + (k \%\% 6))})
+stabilities2 <- perturbationStability(from.kmeans(X, km_list2))
+
+plot(stabilities2)
+
+## Plot the same thing, except without grouping by number of clusters
+plot(stabilities2, sort=FALSE)
+
+## If two clusterings have the same number of clusters, plot only the
+## most stable one.
+plot(stabilities2, prune=TRUE, sort=FALSE)
+
+## Name the best one
+stabilities2[[stabilities2$best.index]]$name <- "BEST!!!"
+plot(stabilities2)
 }
 

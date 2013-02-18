@@ -127,14 +127,13 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
     K <- cl$K
     
     if(as_list_of_lists) {
-      if(length(cl_K_list) < K) {
+      if(length(cl_K_list) < K || is.null(cl_K_list[[K]])) {
         l <- list()
         l[[1]] <- cl
         cl_K_list[[K]] <- l
       } else {
-        cl_K_list[[K]] <- c(cl_K_list[[K]], cl)
+        cl_K_list[[K]][[length(cl_K_list[[K]]) + 1]] <- cl
       }
-      
     }
     else if(length(cl_K_list) < K
             ||  is.null(cl_K_list[[K]])
@@ -143,16 +142,15 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
       cl_K_list[[K]] <- cl
     }
   }
-
-  cl_K_list <- Filter(Negate(is.null),  cl_K_list)
+  
+  # cl_K_list <- Filter(Negate(is.null),  cl_K_list)
 
   if(as_list_of_lists) {
     sort_on_score <- function(cll) {
-      scores <- as.vector(sapply(cll, function(cl) {print(cl)
-                                                    cl$stability}))
-      cll[order(scores)]
+      scores <- as.vector(sapply(cll, function(cl) {cl$stability}))
+      cll[order(scores,decreasing=TRUE)]
     }
-    
+
     cl_K_list <- lapply(cl_K_list, sort_on_score)
   }
 
@@ -221,6 +219,12 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'chosen by optimizing the overall stability against the baseline
 #'distributions as in \code{\link{getOptTheta}}.
 #'
+#'@param test.pvalue When selecting the best clustering among candidates
+#'with a differing number of clusters, a one-sided t-test is performed
+#'to choose the clustering having the least number of clusters and
+#'statistically indistinguishable from the one with the highest score.
+#'This gives the required p-value of this t-test.
+#'
 #'@return Returns an object of type StabilityCollection if a list of
 #'clusterings is supplied, otherwise returns an object of type
 #'StabilityReport.  A StabilityCollection is essentially a list of
@@ -238,14 +242,13 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'provided.
 #'
 #'@examples
-#'## Toy example using a simple mixture model
-#'cen <- matrix(c(0,-2,2,2,-2,1), ncol=2, byrow=TRUE)
-#'
-#'## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
-#'X <- t(cbind(rbind(rnorm(100,mean=cen[[1,1]]),rnorm(100,mean=cen[[1,2]])),
-#'             rbind(rnorm(100,mean=cen[[2,1]]),rnorm(100,mean=cen[[2,2]])),
-#'             rbind(rnorm(100,mean=cen[[3,1]]),rnorm(100,mean=cen[[3,2]]))))
-#'
+#'## Generate a fake dataset with 3 clusters
+#'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+#'cl.size <- 100
+## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
+#'X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
 #'dists  <- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
 #'labels <- c(rep(1,100), rep(2,100), rep(3,100))
 #'
@@ -670,9 +673,42 @@ summary.StabilityCollection <- function(clusterings) {
 #'
 #'@param ... Additional parameters passed to the boxplot function.
 #'See \code{\link{boxplot}} for more information.
-#'
+#' 
 #'@method plot StabilityCollection
 #'@export
+#' @examples
+#'## Generate a fake dataset with 3 clusters
+#'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+#'cl.size <- 100
+## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
+#'X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
+#'
+#'
+#'## Now try a range of numbers of clusters using kmeans
+#'km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=50, nstart=100)})
+#'stabilities1 <- perturbationStability(from.kmeans(X, km_list1))
+#'
+#'plot(stabilities1)
+#'
+#'## Now plot each K with multiple runs of the clustering function.
+#'## Now try several numbers of clusters using kmeans
+#'km_list2 <- lapply(0:17, function(k) { kmeans(X, 1 + (k %% 6))})
+#'stabilities2 <- perturbationStability(from.kmeans(X, km_list2))
+#'
+#'plot(stabilities2)
+#'
+#'## Plot the same thing, except without grouping by number of clusters
+#'plot(stabilities2, sort=FALSE)
+#'
+#'## If two clusterings have the same number of clusters, plot only the
+#'## most stable one.
+#'plot(stabilities2, prune=TRUE, sort=FALSE)
+#'
+#'## Name the best one
+#'stabilities2[[stabilities2$best.index]]$name <- "BEST!!!"
+#'plot(stabilities2)
 plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
                                      label.indices = NULL, ...){
 
@@ -684,12 +720,13 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
     } else if(is.null(label.indices) && in_order) {
       s <- sprintf("%d", cl$K)
     } else if((is.null(label.indices) && !in_order) || label.indices) {
-      s <- sprintf("%d [%d]", cl$K, cl$.original_index)
+      s <- sprintf("%d/%d", cl$K, cl$.original_index)
     } else {
       s <- sprintf("%d", cl$K)
     }
-
-    if(cl$.original_index == clusterings$best.index) {
+    
+    if(!is.na(clusterings$best.index)
+       && cl$.original_index == clusterings$best.index) {
       return(sprintf("*%s*", s))
     } else {
       return(s)
@@ -729,41 +766,47 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
                       function(cll) { make.label(cll[[1]], in_order)})
 
       boxplot(scores, names = names, xlab = xlab, ylab = ylab,
-              las=ifelse(rotate_xlab,3,0), ...)
+              las=ifelse(rotate_xlab,3,0), outline=FALSE,...)
     
     } else {
       
       xpos <- 1
       xpos_vec <- NULL
+      scores <- NULL
+      names <- NULL
       
       for(cl_list in cl_K_list) {
-        xpos_vec <- c(xpos_vec, xpos+(0:(length(cl_list) - 1))/2)
-        xpos     <- xpos_vec[[length(xpos_vec) - 1]]
+        xpos_vec <- c(xpos_vec, xpos+(0:(length(cl_list) - 1)))
+        xpos     <- xpos_vec[[length(xpos_vec)]] + 2
         scores   <- c(scores, lapply(cl_list, function(cl) {cl$scores}))
         names    <- c(names, lapply(cl_list, function(cl) {make.label(cl, FALSE)}))
       }
+            
+      boxplot(scores, names = names, xlab = xlab, ylab = ylab, 
+              at=xpos_vec, las=ifelse(rotate_xlab,3,0),
+              xlim=c(xpos_vec[[1]] - 1, xpos_vec[[length(xpos_vec)]]+1),
+              outline=FALSE, 
+              ...)
       
-      widths <- rep(0.5, n_cl)
-      
-      boxplot(scores, names = names, xlab = , ylab = ylab, width = widths, 
-              at=xpos_vec, las=ifelse(rotate_xlab,3,0), ...)
     }
   } else {
-      
-    if(sort && prune)
-      clusterings <- .orderedStabilityCollection(clusterings, FALSE)
-
-    cl_list <- lapply(1:n_cl, function(idx) {clusterings[[idx]]})
+    
+    if(sort && prune) 
+      cl_list <- .orderedStabilityCollection(clusterings, FALSE)
+    else
+      cl_list <- lapply(1:n_cl, function(idx) {clusterings[[idx]]})
     
     scores <- lapply(cl_list, function(l) { l$scores} )
-    name_vector <- lapply(cl_list, function(l) { make.label(l, FALSE)} )
+    name_vector <- lapply(cl_list, function(l) { make.label(l, TRUE)} )
     
     names(scores) <- name_vector
 
     boxplot(scores, main = "Adjusted Log-Stability Scores",
-            xlab = "Clustering", ylab = "Stability Score",
-            las=ifelse(rotate_xlab,3,0))
+            xlab = "# Clusters", ylab = "Stability Score",
+            las=ifelse(rotate_xlab,3,0), outline=FALSE,...)
   }
+
+  yline(0)
 }
 
 #'Print a brief summary of the stability of an undividual clustering under perturbation. 
@@ -844,6 +887,32 @@ summary.StabilityReport <- function(clustering) {
 #'
 #'@method plot StabilityReport
 #'@export
+#'@examples
+#'## Generate a fake dataset with 3 clusters
+#'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+#'cl.size <- 100
+## X is 300 x 2 matrix of 2d points, 100 from each of 3 components
+#'X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+#'             rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
+#'dists  <- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
+#'labels <- c(rep(1,100), rep(2,100), rep(3,100))
+#'
+#'## Apply to just the distance matrix
+#'stability1 <- perturbationStability(dists)
+#'
+#'## Ways to display information
+#'print(stability1)
+#'summary(stability1)
+#'plot(stability1, classes=labels)
+#'
+#'## Add in our labels
+#'cl <- list(dists = dists, labels = labels)
+#'stability2 <- perturbationStability(cl)
+#'
+#'print(stability2)
+#'summary(stability2)
+#'plot(stability2, classes=labels)
 plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, sort.clusters = 0){
 
   require(grDevices)
@@ -949,7 +1018,7 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #'
 #'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 #'
-#'Z <- make2dStabilityImage(cen, theta=2, buffer=2)
+#'Z <- make2dStabilityImage(cen, buffer=2)
 #'image(Z$x, Z$y, Z$stability)
 #'points(Z$centroids)
 #'

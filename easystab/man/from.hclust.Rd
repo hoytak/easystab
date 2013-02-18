@@ -46,17 +46,17 @@ dx <- dist(scale(X))
 hc <- hclust(dx)
 
 cl_list <- from.hclust(dx, hc)
-stability_sequence <- perturbationStability(cl_list)
+stability_collection <- perturbationStability(cl_list)
 
 # Information about the stability sequence
-print(stability_sequence)
-summary(stability_sequence)
+print(stability_collection)
+summary(stability_collection)
 
 # Plot the stability sequence
-plot(stability_sequence)
+plot(stability_collection)
 
-# Plot the most stable clustering.
-plot(stability_sequence$best, classes = iris[,"Species"])
+# Plot a map of the most stable clustering.
+plot(stability_collection$best, classes = iris[,"Species"])
 }
 \seealso{
   \code{\link{easystab}},

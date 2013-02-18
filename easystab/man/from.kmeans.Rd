@@ -37,13 +37,13 @@ for(k in 1:10) {
  km_list[[k]] = kmeans(X, k)
 }
 
-stability_sequence <- perturbationStability(from.kmeans(X, km_list))
+stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 # plots the sequence
-plot(stability_sequence)
+plot(stability_collection)
 
 # plots the stability map of the 3 component case
-plot(stability_sequence[[3]], classes = iris[,"Species"])
+plot(stability_collection[[3]], classes = iris[,"Species"])
 
 ############################################################
 ## Example with kmeans clustering on yeast data set
@@ -62,11 +62,11 @@ for(k in 1:12) {
  km_list[[k]] = kmeans(X, k, iter.max = 50, nstart=50)
 }
 
-stability_sequence <- perturbationStability(from.kmeans(X, km_list))
+stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
-print(stability_sequence)
+print(stability_collection)
 
-plot(stability_sequence)
+plot(stability_collection)
 
 ############################################################
 ## Example using from.kmeans on a single clustering

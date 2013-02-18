@@ -9,12 +9,14 @@
   \item{centroids}{Array of 2D centroid points, given as a
   K by 2 array or matrix.}
 
-  \item{theta}{The hyperparameter for the perturbation
-  distribution of the prior.  This can be automatically
-  computed by \code{\link{perturbationStability}} or
-  \code{\link{getOptTheta}}, or given manually.  Smaller
-  values penalize points on the boundary regions more
-  severely.}
+  \item{theta}{The rate parameter passed to the shifted
+  exponential prior on the perturbations.  \code{theta}
+  must be non-negative; a warning is issued if \code{theta
+  < 0}. The parameter indexes the strength of the
+  perturbations, with smaller values translating into
+  stronger perturbations.  If NULL, theta is chosen by
+  optimizing the overall stability against the baseline
+  distributions as in \code{\link{getOptTheta}}.}
 
   \item{bounds}{The bounds of the image, given as a four
   element array of \code{c(x_min, x_max, y_min, y_max)}. If
@@ -56,10 +58,20 @@
 ## Display the behavior of a set of centroids
 library(easystab)
 
-cen <- matrix(c(0,-1,-2,2,0,1, 3,3), nrow=4, byrow=TRUE)
+cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 
-Z <- make2dStabilityImage(cen, theta=2, buffer=2)
+Z <- make2dStabilityImage(cen, buffer=2)
 image(Z$x, Z$y, Z$stability)
 points(Z$centroids)
+
+## Something more detailed
+
+layout(matrix(1:9, ncol = 3, byrow=TRUE))
+for(i in 1:9) {
+  t <- (i - 1)/4
+  Z <- make2dStabilityImage(cen, theta=t, buffer=2)
+  image(Z$x, Z$y, Z$stability, main = sprintf("Theta = \%1.2f.", t),
+        xlab = "x", ylab="y")
+}
 }
 
