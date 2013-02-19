@@ -12,7 +12,7 @@ static inline double D(const double *dist, size_t n, size_t _i, size_t _j) {
   size_t j = max(_i, _j);
 
   //return (i == j) ? 0 : dist[n*(i-1) - i*(i-1)/2 + j-i];
-  return (i == j) ? 0 : dist[n*i - (i+1)*i/2 + j-i-1];
+  return (i == j) ? 0 : dist[n*i - (i+1)*i/2 + j - i - 1];
 }
 
 void calculateAverageLinkageDistances(double *dists, int *labels,
@@ -29,7 +29,6 @@ void calculateAverageLinkageDistances(double *dists, int *labels,
 
     for(size_t j = 0; j < n; ++j) {
       if(i == j) continue;
-      
       dists[i*K + labels[j]] += D(src_dists, n, i, j);
     }
     

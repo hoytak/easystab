@@ -16,87 +16,79 @@ struct IdxPair {
   size_t index;
 
   bool operator<(const IdxPair& p) const {
-    return value > p.value;
+    return value < p.value;
   }
 };
 
 struct Buffers {
-  Buffers(size_t K) : B(K), C(K), D(K), E(K), G(K), d(K) {}
-  vector<double> B, C, D, E, G;
+  Buffers(size_t K) : B(K), C(K), D(K), d(K) {}
+  vector<double> B, C, D;
   vector<IdxPair> d;
 };
+
 
 template <typename Array1, typename Array2>
 void _calc_stability_matrix(Array1& dest, const Array2& X, 
 			    size_t n, size_t K, double beta, 
 			    Buffers& buffer) {
 
-  const double eps = 1e-32;
+  const double beta_0d = max(0.0, exp(beta) - 1);
+
+  if(K == 1) {
+    for(size_t i = 0; i < n; ++i)
+      dest[i] = 1;
+    return;
+  }
+
+  vector<IdxPair>& d = buffer.d;
+  vector<double>& B = buffer.B;
+  vector<double>& C = buffer.C;
+  vector<double>& D = buffer.D;
 
   for(size_t i = 0; i < n; ++i) {
-    vector<IdxPair>& d = buffer.d;
-    vector<double>& B = buffer.B;
-    vector<double>& C = buffer.C;
-    vector<double>& D = buffer.D;
-    vector<double>& E = buffer.E;
-    vector<double>& G = buffer.G;
 
     // First map them over
-    double norm = 0;
+    double min_value = d[0].value;
 
     for(size_t k = 0; k < K; ++k) {
       double dv = X[i*K + k];
-      norm += dv*dv;
       d[k].value = max(dv, double(0));
       d[k].index = k;
+
+      min_value = min(min_value, d[k].value);
     }
 
-    if(norm == 0) {
-      for(size_t k = 0; k < K; ++k) {
-	dest[i*K + k] = 1.0 / K;
-      }
+    if(min_value == 0) {
+      size_t zero_count = 0;
+      for(size_t k = 0; k < K; ++k)
+	zero_count += ((d[k].value == 0) ? 1 : 0);
+
+      for(size_t k = 0; k < K; ++k)
+	dest[i*K + k] = (d[k].value == 0) ? (1.0 / zero_count) : 0;
+
       continue;
     }
-
-    for(vector<IdxPair>::iterator it = d.begin(); it != d.end(); ++it) {
-      it->value /= sqrt(norm);
-    }
+    
+    for(size_t k = 0; k < K; ++k)
+      d[k].value /= (min_value + 1e-32);
  
     sort(d.begin(), d.end()); // sorts in descending order by value
-    
-    if(d[0].value == 0 && d[1].value != 0) {
-      for(size_t k = 0; k < K; ++k)
-	dest[i*K + k] = 0;
-    
-      dest[i*K + d[0].index] = 1;
-      continue;
-    }    
 
-    for(vector<IdxPair>::iterator it = d.begin(); it != d.end(); ++it) {
-      it->value += eps;
+    B[0] = 1./d[0].value;
+    C[0] = 1.0;
+
+    for(size_t k = 1; k < K; ++k) {
+      B[k] = B[k-1] + 1.0 / d[k].value;
+      C[k] = exp(beta_0d * (k - d[k].value * B[k-1]));
     }
 
-
-    B[0] = 1./(d[0].value + eps);
-    D[0] = 1;
-    G[0] = d[0].value;
-
-    for(size_t k = 1; k < K; ++k)  {
-      B[k] = B[k-1] + 1. / (d[k].value + eps);
-      C[k] = k - d[k].value * B[k-1];
-      D[k] = exp(exp(-beta)*C[k]);
-      G[k] = D[k] / B[k];
-    }
-
-    E[K-1] = 0;
-
-    for(size_t k = K-1; k > 0; --k)
-      E[k-1] = E[k] + D[k] / (B[k-1]*(d[k].value * B[k-1] + 1.));
+    D[K-1] = 0;
+    
+    for(size_t k = K-1; k >= 1; --k)
+      D[k - 1] = D[k] + C[k] / (B[k-1]*(B[k-1]*d[k].value + 1) );
 
     for(size_t k = 0; k < K; ++k)
-      dest[i*K + d[k].index] = min(double(1.0), 
-				   max(double(0), 
-				       double((G[k] - E[k]) / (d[k].value + eps))));
+      dest[i*K + d[k].index] = (C[k] / B[k] - D[k]) / d[k].value;
   }
 }
 
@@ -173,7 +165,6 @@ void sort_stability_matrix(double *dest, int *indexes, int *K_map,
       sort(K_mapping.begin(), K_mapping.end(), KmapSorter_2(counts,avg_index));
     default: break;
     }
-      
 
     for(size_t k = 0; k < K; ++k)
       Km[K_mapping[k]] = k;
@@ -200,26 +191,23 @@ void sort_stability_matrix(double *dest, int *indexes, int *K_map,
   }
 }
 
-void sorted_stability_matrix(double *dest, int *indexes, int *K_map, 
-			     double *X, int *labels,
-			     size_t n, size_t K, double beta, int Kmap_mode) {
-
-  double *stab_matrix = new double[n*K];
-
-  stability_matrix(stab_matrix, X, n, K, beta);
-
-  sort_stability_matrix(dest, indexes, K_map, stab_matrix, 
-			labels, n, K, Kmap_mode);
-
-  delete[] stab_matrix;
-}
-
 double log_score(const vector<double>& src, size_t n, size_t K) {
 
   double total = 0;
 
   for(size_t i = 0; i < n; ++i)
     total += *max_element(src.begin() + i*K, src.begin() + (i+1)*K);
+
+  return total / n;
+}
+
+template <typename Array1, typename Array2>
+double log_score(const Array1& src, const Array2& labels, size_t n, size_t K) {
+
+  double total = 0;
+
+  for(size_t i = 0; i < n; ++i)
+    total += src[i*K + labels[i]];
 
   return total / n;
 }
@@ -284,38 +272,65 @@ static inline void fill_baseline_matrix(Array& dest, const double *src,
 }
 
 template <typename Array>
-void calculateScores(double * scores, const Array& src, size_t n, size_t K, size_t seed, 
+void calculateScores(double * scores, double * confusion_matrix, double * _stability_matrix, 
+		     const Array& src, int* labels, size_t n, size_t K, size_t seed, 
 		     size_t n_baselines, double beta, bool use_permutations, bool by_dimension) {
+
   vector<double> data_buffer(n*K);
-  vector<double> stab_buffer(n*K);
   Buffers buffer(K);
 
+  double *stability_matrix = (_stability_matrix == NULL) ? new double[n*K] : _stability_matrix;
+
   // Get the first one
-  _calc_stability_matrix(stab_buffer, src, n, K, beta, buffer);
-  const double dist_score = log_score(stab_buffer, n, K);
+  _calc_stability_matrix(stability_matrix, src, n, K, beta, buffer);
+  const double dist_score = log_score(stability_matrix, labels, n, K);
+
+  if(confusion_matrix != NULL) {
+    // Now set up the confusion matrix
+    vector<size_t> cl_counts(K, 0);
+    fill(confusion_matrix, confusion_matrix + K*K, 0);
+
+    for(size_t i = 0; i < n; ++i) {
+      size_t k = size_t(labels[i]); 
+      ++cl_counts[k];
+
+      for(size_t ki = 0; ki < K; ++ki)
+	confusion_matrix[k*K + ki] += stability_matrix[i*K + ki];
+    }
+
+    for(size_t k = 0; k < K; ++k) {
+      for(size_t ki = 0; ki < K; ++ki) {
+	confusion_matrix[k*K + ki] /= (1e-32 + cl_counts[k]);
+      }
+    }
+  }
 
   // Set up the rest of the baselines
   CheapRNG uniform_int(seed);
 
   vector<size_t> seeds(n_baselines);
+  vector<double> stab_buffer(n*K);
 
   generate(seeds.begin(), seeds.end(), uniform_int);
 
   for(size_t i = 0; i < n_baselines; ++i) {
-    
     fill_baseline_matrix(data_buffer, src, n, K, seeds[i], use_permutations, by_dimension);
     _calc_stability_matrix(stab_buffer, data_buffer, n, K, beta, buffer);
     scores[i] = dist_score - log_score(stab_buffer, n, K);
   }
+
+  if(_stability_matrix == NULL) 
+    delete[] stability_matrix;
 }
 
 template <typename Array1>
-double score(const Array1& dist, size_t n, size_t K, size_t seed,
+double score(const Array1& dist, int* labels, size_t n, size_t K, size_t seed,
 	     size_t n_baselines, double beta, bool use_permutations, bool by_dimension)
 {
   double *scores = new double[n_baselines];
 
-  calculateScores(scores, dist, n, K, seed, n_baselines, beta, use_permutations, by_dimension);
+  calculateScores(scores, (double*)NULL, (double*)NULL, dist,labels, 
+		  n, K, seed, n_baselines, beta, use_permutations, by_dimension);
 
   double result =  accumulate(scores, scores + n_baselines, double(0)) / n_baselines;
 
@@ -323,12 +338,11 @@ double score(const Array1& dist, size_t n, size_t K, size_t seed,
   return result;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // Now for the silhouette distances
 
 static inline double calculateSilhouette(double *silhouettes,  double *silhouette_distances, 
-				       int *labels, size_t n, size_t K) {
+					 int *labels, size_t n, size_t K) {
 
   double silhouette_total = 0;
 
@@ -366,7 +380,7 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 			  double image_x_lower, double image_x_upper, 
 			  double image_y_lower, double image_y_upper, 
 			  double *centroids,  size_t K, // centroids is a K x 2 matrix
-			  double beta, double *xvec, double *yvec)
+			  double beta, double *xvec, double *yvec, double edge_buffer)
 {
   if(K == 0) {
     fill(stab_image, stab_image + image_nx*image_ny, 0);
@@ -375,6 +389,12 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
     fill(stab_image, stab_image + image_nx*image_ny, 1);
     return;
   }
+
+  if(image_x_upper < image_x_lower)
+    swap(image_x_upper, image_x_lower);
+
+  if(image_y_upper < image_y_lower)
+    swap(image_y_upper, image_y_lower);
 
   if (image_x_upper == 0 && image_x_lower == 0
       && image_y_upper == 0 && image_y_lower == 0) {
@@ -392,8 +412,8 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
     }
 
     // Add in a buffer region
-    double buffer_x = 0.1 * (image_x_upper - image_x_lower);
-    double buffer_y = 0.1 * (image_y_upper - image_y_lower);
+    double buffer_x = edge_buffer * (image_x_upper - image_x_lower);
+    double buffer_y = edge_buffer * (image_y_upper - image_y_lower);
 
     image_x_lower -= buffer_x;
     image_x_upper += buffer_x;
@@ -428,6 +448,19 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
       _calc_stability_matrix(s, X, 1, K, beta, buffer);
 
       stab_image[yi*image_nx + xi] = *max_element(s, s + K);
+    }
+  }
+
+  // Now, go through and set the pixels of the centroids to 1.
+
+  for(size_t k = 0; k < K; ++k) {
+    long xi = round( (centroids[2*k + 0] - start_x) / vx);
+    long yi = round( (centroids[2*k + 1] - start_y) / vy);
+
+    if(xi >= 0 && xi < long(image_nx) 
+       && yi >= 0 && yi < long(image_ny) ) {
+
+      stab_image[yi*image_nx + xi] = 1;
     }
   }
 
