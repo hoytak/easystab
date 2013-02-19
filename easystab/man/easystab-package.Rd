@@ -121,6 +121,14 @@ plot(stability_sequence)
 # plots the stability map
 plot(stability_sequence[[3]], with_label = TRUE, classes = iris[,"Species"])
 
+## plot pointwise stability image
+
+library(easystab)
+
+cen <- matrix(c(1,0,-1,0,0,1), nrow=3, byrow=TRUE)
+
+plotStabilityImage(cen, 1.0, 201, 201, -3, 3, -2, 4)
+
 }
 
 \seealso{
