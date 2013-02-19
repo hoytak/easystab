@@ -3,8 +3,7 @@
 \title{Adapts the output of \code{hclust} for input into
 \code{perturbationStability}.}
 \usage{
-  from.hclust(dx, hc, clsnum_min = 1, clsnum_max = 10,
-    method = "average")
+  from.hclust(dx, hc, k = 1:10, method = "average")
 }
 \arguments{
   \item{dx}{Distance matrix as produced by \code{dists},
@@ -13,9 +12,9 @@
   \item{hc}{Hierarchical clustering as produced by
   \code{hclust}.}
 
-  \item{clsnum_min}{Minimum cluster number (default 1).}
-
-  \item{clsnum_max}{Maximum cluster number (default 10).}
+  \item{k}{A list giving the numbers of clusters to cut the
+  tree at; this is passed to \code{\link{cutree}}.
+  Defaults to 1:10.}
 
   \item{method}{Method used to calculate the
   point-to-cluster distances from the point-to-point
@@ -36,17 +35,16 @@
   about the behavior of the hierarchical clustering tree.
 }
 \examples{
-
 ############################################################
 ## Interfacing with the hierarchical clustering method
 library(easystab)
 
-## Generate a fake dataset with 3 clusters
-cen <- matrix(c(0,-20,10,20,-20,10), ncol=2, byrow=TRUE)
+Generate a fake dataset with 3 clusters
+cen <- matrix(c(0,-2,1,3,-3,1), ncol=2, byrow=TRUE)
 cl.size <- 100
 X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
-            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
-            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
+           rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+           rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
 
 dx <- dist(X)
 hc <- hclust(dx)
@@ -54,52 +52,40 @@ cl_list <- from.hclust(dx,hc)
 
 stability_collection <- perturbationStability(cl_list)
 
-# Information about the stability sequence
+## Information about the stability sequence
 print(stability_collection)
 summary(stability_collection)
 
-# Plot the stability sequence
+## Plot the stability sequence
 plot(stability_collection)
 
-## Ways to display information
-print(stability1)
-summary(stability1)
-plot(stability1, classes=labels)
-
-
-
-
-
-
-
-
-
-
+############################################################
+## A more detailed example using the UCI Wisconsin breast cancer dataset.
 library(lsa)
 
 breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",sep=",")
 
 X <- breast[,-c(1,2)]
 
-dx <- as.dist(cor(t(X)))
+dx <- as.dist(1 - cosine(t(X)))
+
 hc <- hclust(dx)
 
-cl_list <- from.hclust(dx, hc,k=1:50)
+cl_list <- from.hclust(dx, hc)
 stability_collection <- perturbationStability(cl_list)
 
 # Information about the stability sequence
+layout(matrix(1:2, nrow=1, ncol=2))
 print(stability_collection)
 summary(stability_collection)
 
-# Plot the stability sequence
 plot(stability_collection)
 
-# Plot a map of the most stable clustering.
 plot(stability_collection$best, classes = breast[,2])
 }
 \seealso{
   \code{\link{easystab}},
   \code{\link{perturbationStability}},
-  \code{\link{}}
+  \code{\link{from.kmeans}}
 }
 

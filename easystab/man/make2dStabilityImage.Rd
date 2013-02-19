@@ -64,7 +64,7 @@ Z <- make2dStabilityImage(cen, buffer=2)
 image(Z$x, Z$y, Z$stability)
 points(Z$centroids)
 
-## Something more detailed
+## Something more detailed; display how things change by theta
 
 layout(matrix(1:9, ncol = 3, byrow=TRUE))
 for(i in 1:9) {

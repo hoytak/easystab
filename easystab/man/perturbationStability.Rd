@@ -102,11 +102,7 @@ summary(stability2)
 plot(stability2, classes=labels)
 
 ## Now try several numbers of clusters using kmeans
-km_list = list()
-
-for(k in 1:8)
- km_list[[k]] = kmeans(X, k, iter.max=50, nstart=100)
-
+km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 cl_list <- from.kmeans(X, km_list)
 stability_collection <- perturbationStability(cl_list)
 

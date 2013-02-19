@@ -270,11 +270,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'plot(stability2, classes=labels)
 #'
 #'## Now try several numbers of clusters using kmeans
-#'km_list = list()
-#'
-#'for(k in 1:8)
-#'  km_list[[k]] = kmeans(X, k, iter.max=50, nstart=100)
-#'
+#'km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 #'cl_list <- from.kmeans(X, km_list)
 #'stability_collection <- perturbationStability(cl_list)
 #'
@@ -507,7 +503,7 @@ from.kmeans <- function(x, kmeans_output) {
 #'@param hc Hierarchical clustering as produced by \code{hclust}.
 #'
 #'@param k A list giving the numbers of clusters to cut the tree at;
-#'this is passed to \code{\link{\cutree}}.  Defaults to 1:10.
+#'this is passed to \code{\link{cutree}}.  Defaults to 1:10.
 #'
 #'@param method Method used to calculate the point-to-cluster distances from
 #'the point-to-point distance matrix \code{dx} given.  Currently, the two
@@ -523,27 +519,53 @@ from.kmeans <- function(x, kmeans_output) {
 #'\code{\link{from.kmeans}}
 #'
 #'@examples
-#' ############################################################
-#' ## Interfacing with the hierarchical clustering method
-#' library(easystab)
+#'############################################################
+#'## Interfacing with the hierarchical clustering method
+#'library(easystab)
 #'
-#' X <- iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")]
+#'Generate a fake dataset with 3 clusters
+#'cen <- matrix(c(0,-2,1,3,-3,1), ncol=2, byrow=TRUE)
+#'cl.size <- 100
+#'X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+#'            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+#'            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
 #'
-#' dx <- dist(scale(X))
-#' hc <- hclust(dx)
+#'dx <- dist(X)
+#'hc <- hclust(dx)
+#'cl_list <- from.hclust(dx,hc)
 #'
-#' cl_list <- from.hclust(dx, hc)
-#' stability_collection <- perturbationStability(cl_list)
+#'stability_collection <- perturbationStability(cl_list)
 #'
-#' # Information about the stability sequence
-#' print(stability_collection)
-#' summary(stability_collection)
+#'## Information about the stability sequence
+#'print(stability_collection)
+#'summary(stability_collection)
 #'
-#' # Plot the stability sequence
-#' plot(stability_collection)
+#'## Plot the stability sequence
+#'plot(stability_collection)
 #'
-#' # Plot a map of the most stable clustering.
-#' plot(stability_collection$best, classes = iris[,"Species"])
+#'############################################################
+#'## A more detailed example using the UCI Wisconsin breast cancer dataset. 
+#'library(lsa)
+#'
+#'breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",sep=",")
+#'
+#'X <- breast[,-c(1,2)]
+#'
+#'dx <- as.dist(1 - cosine(t(X)))
+#'
+#'hc <- hclust(dx)
+#'
+#'cl_list <- from.hclust(dx, hc)
+#'stability_collection <- perturbationStability(cl_list)
+#'
+#'# Information about the stability sequence
+#'layout(matrix(1:2, nrow=1, ncol=2))
+#'print(stability_collection)
+#'summary(stability_collection)
+#'
+#'plot(stability_collection)
+#'
+#'plot(stability_collection$best, classes = breast[,2])
 #'@export
 from.hclust <- function(dx, hc, k=1:10, method = "average") {
 
@@ -663,7 +685,7 @@ summary.StabilityCollection <- function(clusterings) {
 #' 
 #'@method plot StabilityCollection
 #'@export
-#' @examples
+#'@examples
 #'## Generate a fake dataset with 3 clusters
 #'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 #'cl.size <- 100
@@ -1010,7 +1032,7 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #'image(Z$x, Z$y, Z$stability)
 #'points(Z$centroids)
 #'
-#'## Something more detailed
+#'## Something more detailed; display how things change by theta
 #' 
 #' layout(matrix(1:9, ncol = 3, byrow=TRUE))
 #' for(i in 1:9) {

@@ -1,7 +1,7 @@
 ## Toy example using a simple mixture model
 library(easystab)
 
-cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+cen <- matrix(c(0,-2,1,3,-2,1), ncol=2, byrow=TRUE)
 
 cl.size <- 100
 ## X is 300 x 2 matrix of 2d points, 100 from each of 3 components

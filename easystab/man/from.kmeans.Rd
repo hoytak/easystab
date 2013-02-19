@@ -37,7 +37,7 @@ stability_collection <- perturbationStability(from.kmeans(X, km_list))
 # plots the sequence
 plot(stability_collection)
 
-# plots the stability map of the 3 component case
+## plots the stability map of the 3 component case
 plot(stability_collection[[3]], classes = iris[,"Species"])
 
 ############################################################
@@ -51,8 +51,8 @@ km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
- 
-## Plot the whole stability collection 
+
+## Plot the whole stability collection
 plot(stability_collection)
 
 ## Plot the best class
