@@ -7,3 +7,5 @@ in a dataset, examine relative cluster separation, and map the overall
 behavior of a clustering.  Functions are provided to interface with
 R's hclust and kmeans packages.
 
+The 'scratch' folder contains test scripts for developers' use only. End users should not use them as examples.
+
