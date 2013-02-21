@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><title>R: Calculate clustering perturbation stability.</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="R.css">
+</head><body>
+
+<table width="100%" summary="page for perturbationStability"><tr><td>perturbationStability</td><td align="right">R Documentation</td></tr></table>
+
+<h2>Calculate clustering perturbation stability.</h2>
+
+<h3>Description</h3>
+
+
+<p>Calculates the stability of clusterings under a
+non-parametric Bayesian perturbation as described in in
+[[PAPER]]. The exact method used is to perturb the
+cluster-to-point distances by scaling them with a shifted
+exponential random variable, then computing the
+probabilities of membership for each of the points under
+this perturbation.  This is compared against a set of
+randomly sampled bootstrapped baselines to determine the
+final stability score.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+  perturbationStability(clusterings, n_baselines = 32,
+    seed = 0, theta = NULL, test_pvalue = 0.05)
+</pre>
+
+
+<h3>Arguments</h3>
+
+
+<table summary="R argblock">
+<tr valign="top"><td><code>clusterings</code></td>
+<td>
+<p>A point-to-cluster distance matrix, a
+single clustering, or a list of clusterings. Each
+clustering of <code>n</code> data points into <code>K</code> clusters
+is specified primarily by matrix giving point to cluster
+distances.  Specifically, clustering must contain an of
+<code>n</code> by <code>K</code> distance matrix giving the point to
+cluster distance (<code>K</code> can be different across
+clusterings). Optionally, an array of <code>n</code> integer
+labels <code>labels</code> in <code>1,...,K</code> is expected; if
+not present, a warning is given and the labels are
+computed according to the minimum point-to-cluster
+distance.  If only the distance matrix is given, then
+points are assigned to their minimum distance cluster
+with no warning.</p>
+</td></tr>
+<tr valign="top"><td><code>seed</code></td>
+<td>
+<p>Random seed used for generating the baseline
+stability matrices.</p>
+</td></tr>
+<tr valign="top"><td><code>n_baselines</code></td>
+<td>
+<p>The number of random baseline matrices
+to use in computing the stability scores.  Increase this
+number to get more accuracy at the expense of speed.</p>
+</td></tr>
+<tr valign="top"><td><code>theta</code></td>
+<td>
+<p>The rate parameter passed to the shifted
+exponential prior on the perturbations.  <code>theta</code>
+must be non-negative; a warning is issued if <code>theta
+  &lt; 0</code>. The parameter indexes the strength of the
+perturbations, with smaller values translating into
+stronger perturbations.  If NULL, theta is chosen by
+optimizing the overall stability against the baseline
+distributions as in <code>getOptTheta</code>.</p>
+</td></tr>
+<tr valign="top"><td><code>test.pvalue</code></td>
+<td>
+<p>When selecting the best clustering
+among candidates with a differing number of clusters, a
+one-sided t-test is performed to choose the clustering
+having the smallest number of clusters and statistically
+indistinguishable from the clustering with the highest
+score. This is the level at which this t-test indicates
+that two stability scores are statistically
+indistinguishable.</p>
+</td></tr>
+</table>
+
+
+<h3>Value</h3>
+
+
+<p>Returns an object of type StabilityCollection if a list
+of clusterings is supplied, otherwise returns an object
+of type StabilityReport.  A StabilityCollection is
+essentially a list of StabilityReport objects
+corresponding to the original list of clusterings.
+</p>
+<p>A StabilityReport object contains the original
+<code>dists</code>, <code>labels</code> (possibly calculated), the
+scalar stability score <code>stability</code>, the empirical
+collection of stability scores <code>scores</code>, the theta
+parameter used or found <code>theta</code>, the individual
+membership probabilities of the points under
+perturbation, the <code>stability_matrix</code> the sorted
+stability matrix used for plotting the behavior of the
+clustering. <code>print</code>, <code>summary</code>, and <code>plot</code>
+methods are provided.
+</p>
+
+
+<h3>Examples</h3>
+
+<pre>
+## Generate a fake dataset with 3 clusters
+cen &lt;- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
+cl.size &lt;- 100
+X &lt;- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
+            rbind(rnorm(cl.size,mean=cen[[2,1]]), rnorm(cl.size,mean=cen[[2,2]])),
+            rbind(rnorm(cl.size,mean=cen[[3,1]]), rnorm(cl.size,mean=cen[[3,2]]))))
+dists  &lt;- t(apply(X, 1, function(mu) {sqrt(rowSums((cen - mu)^2))}))
+labels &lt;- c(rep(1,100), rep(2,100), rep(3,100))
+
+## Apply to just the distance matrix
+stability1 &lt;- perturbationStability(dists)
+
+## Ways to display information
+print(stability1)
+summary(stability1)
+plot(stability1, classes=labels)
+
+## Add in our labels
+cl &lt;- list(dists = dists, labels = labels)
+stability2 &lt;- perturbationStability(cl)
+
+print(stability2)
+summary(stability2)
+plot(stability2, classes=labels)
+
+## Now try several numbers of clusters using kmeans
+km_list &lt;- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+cl_list &lt;- from.kmeans(X, km_list)
+stability_collection &lt;- perturbationStability(cl_list)
+
+print(stability_collection)
+summary(stability_collection)
+plot(stability_collection)
+</pre>
+
+
+</body></html>
