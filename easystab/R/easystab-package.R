@@ -25,4 +25,6 @@
 #'\code{\link{summary.StabilityCollection}}, \code{\link{plot.StabilityReport}},
 #'\code{\link{print.StabilityReport}}, \code{\link{summary.StabilityReport}},
 #'\code{\link{from.hclust}}, \code{\link{from.kmeans}}, \code{\link{getOptTheta}}
+#'
+#'@references Hoyt Koepke, Bertrand Clarke. to appear: Stastical Analysis and Data Mining.
 NULL

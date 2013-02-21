@@ -26,6 +26,10 @@
   Package\cr Version: \tab 1.0\cr Date: \tab 2012-11-28\cr
   License: \tab GPL (>= 2)\cr LazyLoad: \tab yes\cr }
 }
+\references{
+  Hoyt Koepke, Bertrand Clarke. to appear: Stastical
+  Analysis and Data Mining.
+}
 \seealso{
   \code{\link{perturbationStability}},
   \code{\link{make2dStabilityImage}},
