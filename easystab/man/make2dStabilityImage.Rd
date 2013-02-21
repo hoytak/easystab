@@ -74,4 +74,7 @@ for(i in 1:9) {
         xlab = "x", ylab="y")
 }
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

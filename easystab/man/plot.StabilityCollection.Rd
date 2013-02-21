@@ -84,4 +84,7 @@ plot(stabilities2, prune=TRUE, sort=FALSE)
 stabilities2[[stabilities2$best.index]]$name <- "BEST!!!"
 plot(stabilities2)
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

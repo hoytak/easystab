@@ -8,4 +8,7 @@
   Print a brief summary of the stability of an undividual
   clustering under perturbation.
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

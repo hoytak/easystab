@@ -9,4 +9,7 @@
   clustering under perturbation.  Summary includes
   individual cluster stabilites.
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

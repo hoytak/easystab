@@ -8,4 +8,7 @@
   Print a brief summary of the stability of a clustering
   collection.
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

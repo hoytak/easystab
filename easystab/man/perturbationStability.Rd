@@ -110,4 +110,7 @@ print(stability_collection)
 summary(stability_collection)
 plot(stability_collection)
 }
+\seealso{
+  \code{\link{easystab}}
+}
 

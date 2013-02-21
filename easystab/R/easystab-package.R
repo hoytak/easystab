@@ -27,4 +27,5 @@
 #'\code{\link{from.hclust}}, \code{\link{from.kmeans}}, \code{\link{getOptTheta}}
 #'
 #'@references Hoyt Koepke, Bertrand Clarke. to appear: Stastical Analysis and Data Mining.
+#'
 NULL

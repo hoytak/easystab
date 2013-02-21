@@ -277,6 +277,8 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'print(stability_collection)
 #'summary(stability_collection)
 #'plot(stability_collection)
+#'
+#'@seealso \code{\link{easystab}}
 #'@export
 perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta = NULL, test_pvalue = 0.05){
 
@@ -464,6 +466,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'## stability map plot.
 #'
 #'plot(stability, classes=yeast[,10])
+#'
 #'@export
 from.kmeans <- function(x, kmeans_output) {
 
@@ -566,6 +569,7 @@ from.kmeans <- function(x, kmeans_output) {
 #'plot(stability_collection)
 #'
 #'plot(stability_collection$best, classes = breast[,2])
+#'
 #'@export
 from.hclust <- function(dx, hc, k=1:10, method = "average") {
 
@@ -599,6 +603,8 @@ from.hclust <- function(dx, hc, k=1:10, method = "average") {
 #' Print a brief summary of the stability of a clustering collection.
 #' 
 #'@method print StabilityCollection
+#'
+#'@seealso \code{\link{easystab}}
 #'@export
 print.StabilityCollection <- function(clusterings) {
 
@@ -611,6 +617,8 @@ print.StabilityCollection <- function(clusterings) {
 #'Print a detaild summary of the stability of a clustering collection.
 #'
 #'@method summary StabilityCollection
+#'
+#'@seealso \code{\link{easystab}}
 #'@export
 summary.StabilityCollection <- function(clusterings) {
 
@@ -718,6 +726,8 @@ summary.StabilityCollection <- function(clusterings) {
 #'## Name the best one
 #'stabilities2[[stabilities2$best.index]]$name <- "BEST!!!"
 #'plot(stabilities2)
+#'
+#'@seealso \code{\link{easystab}}
 plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
                                      label.indices = NULL, ...){
 
@@ -821,6 +831,8 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
 #'Print a brief summary of the stability of an undividual clustering under perturbation. 
 #'
 #'@method print StabilityReport
+#'
+#'@seealso \code{\link{easystab}}
 #'@export
 print.StabilityReport <- function(clustering) {
 
@@ -839,6 +851,8 @@ print.StabilityReport <- function(clustering) {
 #' perturbation.  Summary includes individual cluster stabilites.
 #'
 #'@method summary StabilityReport
+#'
+#'@seealso \code{\link{easystab}}
 #'@export
 summary.StabilityReport <- function(clustering) {
 
@@ -922,6 +936,7 @@ summary.StabilityReport <- function(clustering) {
 #'print(stability2)
 #'summary(stability2)
 #'plot(stability2, classes=labels)
+#'
 plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, sort.clusters = 0){
 
   require(grDevices)
@@ -1043,6 +1058,8 @@ plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL
 #' }
 #' 
 #'@export
+#'
+#'@seealso \code{\link{easystab}}
 make2dStabilityImage <- function(centroids, theta = 1, bounds = NULL, size=c(500,500), buffer = 0.25) {
 
   if(!is.null(theta) && theta < 0) {
