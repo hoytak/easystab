@@ -26,4 +26,16 @@
   Package\cr Version: \tab 1.0\cr Date: \tab 2012-11-28\cr
   License: \tab GPL (>= 2)\cr LazyLoad: \tab yes\cr }
 }
+\seealso{
+  \code{\link{perturbationStability}},
+  \code{\link{make2dStabilityImage}},
+  \code{\link{plot.StabilityCollection}},
+  \code{\link{print.StabilityCollection},
+  \code{\link{summary.StabilityCollection}},
+  \code{\link{plot.StabilityReport}},
+  \code{\link{print.StabilityReport}},
+  \code{\link{summary.StabilityReport}},
+  \code{\link{from.hclust}}, \code{\link{from.kmeans}},
+  \code{\link{getOptTheta}}
+}
 
