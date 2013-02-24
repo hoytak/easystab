@@ -111,6 +111,8 @@ summary(stability_collection)
 plot(stability_collection)
 }
 \seealso{
-  \code{\link{easystab}}
+  \code{\link{easystab}}, \code{\link{from.hclust}},
+  \code{\link{from.kmeans}}, \code{\link{getOptTheta}},
+  \code{\link{make2dStabilityImage}}
 }
 
