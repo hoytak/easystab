@@ -42,12 +42,14 @@ StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow
     is_list <- FALSE
 
     X <- clusterings
-    clusterings <- list()
+
+    clusterings = list()
     clusterings$dists <- X
+
     n_points <- nrow(X)
     
     clusterings$labels <- checked_labels(clusterings, TRUE)
-    
+
   } else if(! is.null(clusterings$dists)) {
 
     is_list <- FALSE
@@ -61,7 +63,7 @@ StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow
 
     is_list <- TRUE
     n_points <- NULL
-    
+
     for(i in 1:length(clusterings)) {
       
       cl <- clusterings[[i]]
@@ -105,7 +107,7 @@ StabilityColorMap <- function(n=512) { colorRampPalette(c("black","red", "yellow
 
 f_theta <- function(theta, clusterings, seed, n_baselines){
   score_total <- 0
-  for(idx in 1:clusterings$n_clusterings){
+  for(idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
     X <- l$dists
     labels <- l$labels
@@ -174,8 +176,9 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
 #'@examples
 #'##################################################
 #'## These examples produce exactly the same results as those in
-#'perturbationStability.
+#'## perturbationStability.
 #'
+#'library(easystab)
 #'## Generate a fake dataset with 3 clusters
 #'
 #'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
@@ -220,7 +223,7 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
 getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
-  
+
   res <- optimize(f_theta, interval = c(0, 12), tol = 0.00001,
                   clusterings = clusterings, seed = seed, n_baselines = n_baselines)
   
@@ -266,7 +269,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'chosen by optimizing the overall stability against the baseline
 #'distributions as in \code{\link{getOptTheta}}.
 #'
-#'@param test.pvalue When selecting the best clustering among candidates
+#'@param test_pvalue When selecting the best clustering among candidates
 #'with a differing number of clusters, a one-sided t-test is performed
 #'to choose the clustering having the smallest number of clusters and
 #'statistically indistinguishable from the clustering with the highest
@@ -340,16 +343,14 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     warning("Theta parameter cannot be negative; clipping to 0.")
     theta <- 0
   }
-  
+
   cl_info <- .processListOfClusterings(clusterings)
 
   clusterings <- cl_info$clusterings
+
   is_list <- cl_info$is_list
   n_points <- cl_info$n_points
 
-  n_clusterings <- length(clusterings)
-  clusterings$n_clusterings <- n_clusterings
-  
   if(is.null(theta)){
     res <- optimize(f_theta, interval = c(0, 5), tol = 0.00001,
                     clusterings = clusterings, seed = seed, n_baselines = n_baselines)
@@ -358,7 +359,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     opt_theta <- theta
   }
   
-  for( idx in 1:n_clusterings){
+  for( idx in 1:length(clusterings)){
     l <- clusterings[[idx]]
     scores <- rep(as.numeric(NA), times = n_baselines)
     X <- l$dists
@@ -388,7 +389,9 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
   }
 
   class(clusterings) <- "StabilityCollection"
-  
+
+  clusterings$n_clusterings = length(clusterings)
+
   if(is_list){
     ## Add in a bunch of estimates of the overall clustering stability
     cl_K_list <- .orderedStabilityCollection(clusterings, FALSE)
@@ -517,7 +520,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'plot(stability, classes=yeast[,10])
 #'
 #'@export
-from.kmeans <- function(x, kmeans_output) {
+from.kmeans <- function(X, kmeans_output) {
 
   is_list <- TRUE
   if(! is.null(names(kmeans_output))){
@@ -530,7 +533,7 @@ from.kmeans <- function(x, kmeans_output) {
   clusterings <- list()
   for(cl in kmeans_output) {
     cl$labels <- cl$cluster
-    cl$dists <- rdist(x, cl$centers)
+    cl$dists <- rdist(X, cl$centers)
     clusterings[[length(clusterings)+1]] <- cl
   }
 
@@ -575,7 +578,7 @@ from.kmeans <- function(x, kmeans_output) {
 #'## Interfacing with the hierarchical clustering method
 #'library(easystab)
 #'
-#'Generate a fake dataset with 3 clusters
+#'## Generate a fake dataset with 3 clusters
 #'cen <- matrix(c(0,-2,1,3,-3,1), ncol=2, byrow=TRUE)
 #'cl.size <- 100
 #'X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),
@@ -643,7 +646,10 @@ from.hclust <- function(dx, hc, k=1:10, method = "average") {
     }else if (method == "median"){
       .Call('_calculateRepresentativeDistances', dist_matrix, labels, n, K, dx)
     }
-    clusterings[[length(clusterings)+1]] <- list(dists = t(dist_matrix), labels = labels)
+    clustering <- list()
+    clustering$dists <- t(dist_matrix)
+    clustering$labels <- labels
+    clusterings[[length(clusterings)+1]] <- clustering
   }
   
   clusterings
@@ -653,10 +659,18 @@ from.hclust <- function(dx, hc, k=1:10, method = "average") {
 #' 
 #'@method print StabilityCollection
 #'
+#'@param x The output of \code{perturbationStablity} -- a
+#'list of clusters with perturbation stability
+#'analyses.
+#'
+#'@param ... optional arguments passed to internal functions
+#'
 #'@seealso \code{\link{easystab}}
 #'@export
-print.StabilityCollection <- function(clusterings) {
+print.StabilityCollection <- function(x, ...) {
 
+  clusterings = x
+  
   cat(sprintf("Perturbation Stability Sequence:\n"))
   cat(sprintf("  %d clusterings. \n", clusterings$n_clusterings))
   cat(sprintf("  Most stable clustering has %d clusters. \n", clusterings$estimated_K))
@@ -667,10 +681,18 @@ print.StabilityCollection <- function(clusterings) {
 #'
 #'@method summary StabilityCollection
 #'
+#'@param object The output of \code{perturbationStablity} -- a
+#'list of clusters with perturbation stability
+#'analyses.
+#'
+#'@param ... optional argements passed to internal functions
+#'
 #'@seealso \code{\link{easystab}}
 #'@export
-summary.StabilityCollection <- function(clusterings) {
+summary.StabilityCollection <- function(object, ...) {
 
+  clusterings = object
+  
   cat(sprintf("Perturbation Stability Sequence:\n"))
   cat(sprintf("  %d clusterings. \n", clusterings$n_clusterings))
 
@@ -706,7 +728,7 @@ summary.StabilityCollection <- function(clusterings) {
 #'stability scores produced by perturbationStability as a sequence of box
 #'plots.
 #'
-#'@param clusterings The output of \code{perturbationStablity} -- a
+#'@param x The output of \code{perturbationStablity} -- a
 #'list of clusters with perturbation stability
 #'analyses. Additionally:
 #'
@@ -777,9 +799,10 @@ summary.StabilityCollection <- function(clusterings) {
 #'plot(stabilities2)
 #'
 #'@seealso \code{\link{easystab}}
-plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
+plot.StabilityCollection <- function(x, sort = TRUE, prune = FALSE,
                                      label.indices = NULL, ...){
 
+  clusterings = x
   n_cl <- clusterings$n_clusterings
   
   make.label <- function(cl, in_order) {
@@ -881,10 +904,16 @@ plot.StabilityCollection <- function(clusterings, sort = TRUE, prune = FALSE,
 #'
 #'@method print StabilityReport
 #'
+#'@param x A StabilityReport object, as given by an output
+#'of perturbationStability.
+#'
+#'@param ... optional arguments passed to internal functions
+#'
 #'@seealso \code{\link{easystab}}
 #'@export
-print.StabilityReport <- function(clustering) {
+print.StabilityReport <- function(x, ...) {
 
+  clustering = x
   cat(sprintf("Perturbation Stability Report:\n"))
   cat(sprintf("  %d data points grouped into %d clusters.\n",
               nrow(clustering$dists), clustering$K))
@@ -901,10 +930,17 @@ print.StabilityReport <- function(clustering) {
 #'
 #'@method summary StabilityReport
 #'
+#'@param object A StabilityReport object, as given by an output
+#'of perturbationStability.
+#'
+#'@param ... optional arguments passed to internal functions
+#'
 #'@seealso \code{\link{easystab}}
 #'@export
-summary.StabilityReport <- function(clustering) {
+summary.StabilityReport <- function(object, ...) {
 
+  clustering = object
+  
   print.StabilityReport(clustering)
 
   cat(sprintf("Stability of Each Cluster Under Perturbation:\n\n"))
@@ -939,7 +975,7 @@ summary.StabilityReport <- function(clustering) {
 #'clustering) version, they are plotted alongside the heatmap plot, with class
 #'membership indexed by color.
 #'
-#'@param clustering A StabilityReport object, as given by an output
+#'@param x A StabilityReport object, as given by an output
 #'of perturbationStability.
 #'
 #'@param classes Auxiliary class labels for the data points, possibly from
@@ -954,6 +990,8 @@ summary.StabilityReport <- function(clustering) {
 #'@param sort.clusters Whether to sort the clusters in the stability
 #'map image for aesthetic reasons.  0 (default) means to not reorder
 #'them, 1 orders them by cluster size, and 2 orders them by average stability.
+#'
+#'@param ... optional arguments passed to internal functions
 #'
 #'@seealso \code{\link{easystab}}
 #'
@@ -986,8 +1024,10 @@ summary.StabilityReport <- function(clustering) {
 #'summary(stability2)
 #'plot(stability2, classes=labels)
 #'
-plot.StabilityReport <- function(clustering, classes = NULL, class_colors = NULL, sort.clusters = 0){
+plot.StabilityReport <- function(x, classes = NULL, class_colors = NULL, sort.clusters = 0, ...){
 
+  clustering = x
+  
   require(grDevices)
   require(plotrix)
 

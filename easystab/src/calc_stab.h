@@ -7,7 +7,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "simple_rng.hpp"
+#include "simple_rng.h"
 
 using namespace std;
 

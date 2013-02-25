@@ -2,7 +2,7 @@
 \alias{from.kmeans}
 \title{Adapts a single clustering, or list of clusterings, from \code{kmeans} to one usable by \code{perturbationStability}.}
 \usage{
-  from.kmeans(x, kmeans_output)
+  from.kmeans(X, kmeans_output)
 }
 \arguments{
   \item{X}{Matrix or data frame object containing the

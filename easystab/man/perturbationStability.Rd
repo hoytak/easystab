@@ -37,7 +37,7 @@
   optimizing the overall stability against the baseline
   distributions as in \code{\link{getOptTheta}}.}
 
-  \item{test.pvalue}{When selecting the best clustering
+  \item{test_pvalue}{When selecting the best clustering
   among candidates with a differing number of clusters, a
   one-sided t-test is performed to choose the clustering
   having the smallest number of clusters and statistically

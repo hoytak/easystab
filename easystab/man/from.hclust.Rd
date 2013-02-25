@@ -39,7 +39,7 @@
 ## Interfacing with the hierarchical clustering method
 library(easystab)
 
-Generate a fake dataset with 3 clusters
+## Generate a fake dataset with 3 clusters
 cen <- matrix(c(0,-2,1,3,-3,1), ncol=2, byrow=TRUE)
 cl.size <- 100
 X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]])),

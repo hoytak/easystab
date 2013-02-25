@@ -34,8 +34,9 @@
 \examples{
 ##################################################
 ## These examples produce exactly the same results as those in
-perturbationStability.
+## perturbationStability.
 
+library(easystab)
 ## Generate a fake dataset with 3 clusters
 
 cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)

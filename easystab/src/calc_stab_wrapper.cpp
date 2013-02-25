@@ -1,5 +1,5 @@
-#include "calc_stab.hpp"
-#include "dist_utils.hpp"
+#include "calc_stab.h"
+#include "dist_utils.h"
 
 #include <R_ext/Rdynload.h>
 #include <Rdefines.h>

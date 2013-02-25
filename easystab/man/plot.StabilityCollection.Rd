@@ -3,13 +3,13 @@
 \title{Plot the stability scores produced by perturbationStability as a sequence of
 box plots.}
 \usage{
-  \method{plot}{StabilityCollection} (clusterings,
-    sort = TRUE, prune = FALSE, label.indices = NULL, ...)
+  \method{plot}{StabilityCollection} (x, sort = TRUE,
+    prune = FALSE, label.indices = NULL, ...)
 }
 \arguments{
-  \item{clusterings}{The output of
-  \code{perturbationStablity} -- a list of clusters with
-  perturbation stability analyses. Additionally:
+  \item{x}{The output of \code{perturbationStablity} -- a
+  list of clusters with perturbation stability analyses.
+  Additionally:
 
   Set the \code{name} attribute of a specific clustering in
   order to change the corresponding label on the box plots.

@@ -34,7 +34,7 @@
   \code{\link{perturbationStability}},
   \code{\link{make2dStabilityImage}},
   \code{\link{plot.StabilityCollection}},
-  \code{\link{print.StabilityCollection},
+  \code{\link{print.StabilityCollection}},
   \code{\link{summary.StabilityCollection}},
   \code{\link{plot.StabilityReport}},
   \code{\link{print.StabilityReport}},

@@ -2,12 +2,12 @@
 \alias{plot.StabilityReport}
 \title{Display the stability of a clustering as a heat map plot.}
 \usage{
-  \method{plot}{StabilityReport} (clustering,
-    classes = NULL, class_colors = NULL, sort.clusters = 0)
+  \method{plot}{StabilityReport} (x, classes = NULL,
+    class_colors = NULL, sort.clusters = 0, ...)
 }
 \arguments{
-  \item{clustering}{A StabilityReport object, as given by
-  an output of perturbationStability.}
+  \item{x}{A StabilityReport object, as given by an output
+  of perturbationStability.}
 
   \item{classes}{Auxiliary class labels for the data
   points, possibly from known classes or other clusterings.
@@ -24,6 +24,9 @@
   stability map image for aesthetic reasons.  0 (default)
   means to not reorder them, 1 orders them by cluster size,
   and 2 orders them by average stability.}
+
+  \item{...}{optional arguments passed to internal
+  functions}
 }
 \description{
   Plots the stability of a clustering as a heat map plot,
