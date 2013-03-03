@@ -67,8 +67,11 @@ library(mlbench)
 data(BreastCancer)
 
 bcdata <- na.omit(BreastCancer)
-X <- data.matrix(bcdata[,-c(1,11)])
-dx <- as.dist(1 - cor(t(X)))
+
+# Use 1 - ||x*y|| / ||x|| ||y|| to compute divergence
+X <- scale(t(data.matrix(bcdata[,-c(1,11)])))
+Y <- t(X) %*% X / nrow(X)
+dx <- as.dist(1 - Y)
 
 hc <- hclust(dx)
 

@@ -602,13 +602,14 @@ from.kmeans <- function(X, kmeans_output) {
 #'############################################################
 #'## A more detailed example using the UCI Wisconsin breast cancer dataset.
 #'library(mlbench)
+#'library(lsa)
 #' 
 #'# Load and cluster the Breast Cancer dataset using correlation distance.
 #'data(BreastCancer)
 #' 
 #'bcdata <- na.omit(BreastCancer)
 #'X <- data.matrix(bcdata[,-c(1,11)])
-#'dx <- as.dist(1 - cor(t(X)))
+#'dx <- as.dist(1 - cosine(t(X)))
 #' 
 #'hc <- hclust(dx)
 #' 
