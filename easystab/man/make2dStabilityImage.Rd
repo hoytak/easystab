@@ -66,9 +66,9 @@ points(Z$centroids)
 
 ## Something more detailed; display how things change by theta
 
-layout(matrix(1:9, ncol = 3, byrow=TRUE))
-for(i in 1:9) {
-  t <- (i - 1)/4
+layout(matrix(1:4, ncol = 2, byrow=TRUE))
+for(i in 1:4) {
+  t <- (i - 1) * 0.5
   Z <- make2dStabilityImage(cen, theta=t, buffer=2)
   image(Z$x, Z$y, Z$stability, main = sprintf("Theta = \%1.2f.", t),
         xlab = "x", ylab="y")

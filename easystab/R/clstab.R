@@ -479,7 +479,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'
 #'X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 #'
-#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'# plots the sequence
@@ -495,7 +495,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'
 #'X <- scale(yeast[,-c(1,10)])
 #'
-#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'print(stability_collection)
@@ -512,7 +512,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'## Use X from previous yeast example
 #'
 #'## Works on a single clustering
-#'km_cl <- kmeans(X, 8, iter.max = 50, nstart=50)
+#'km_cl <- kmeans(X, 8, iter.max = 25, nstart=25)
 #'stability <- perturbationStability(from.kmeans(X, km_cl))
 #'
 #'## Plot the stability -- a single clustering, so displays it as a
@@ -601,15 +601,14 @@ from.kmeans <- function(X, kmeans_output) {
 #'
 #'############################################################
 #'## A more detailed example using the UCI Wisconsin breast cancer dataset.
-#'library(lsa)
 #'library(mlbench)
 #' 
-#'# Load and cluster the Breast Cancer dataset.
+#'# Load and cluster the Breast Cancer dataset using correlation distance.
 #'data(BreastCancer)
 #' 
 #'bcdata <- na.omit(BreastCancer)
 #'X <- data.matrix(bcdata[,-c(1,11)])
-#'dx <- as.dist(1 - cosine(t(X)))
+#'dx <- as.dist(1 - cor(t(X)))
 #' 
 #'hc <- hclust(dx)
 #' 
@@ -1141,9 +1140,9 @@ plot.StabilityReport <- function(x, classes = NULL, class_colors = NULL, sort.cl
 #'
 #'## Something more detailed; display how things change by theta
 #' 
-#' layout(matrix(1:9, ncol = 3, byrow=TRUE))
-#' for(i in 1:9) {
-#'   t <- (i - 1)/4
+#' layout(matrix(1:4, ncol = 2, byrow=TRUE))
+#' for(i in 1:4) {
+#'   t <- (i - 1) * 0.5
 #'   Z <- make2dStabilityImage(cen, theta=t, buffer=2)
 #'   image(Z$x, Z$y, Z$stability, main = sprintf("Theta = %1.2f.", t),
 #'         xlab = "x", ylab="y")

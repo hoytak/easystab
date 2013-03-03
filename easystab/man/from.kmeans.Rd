@@ -31,7 +31,7 @@ library(easystab)
 
 X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 # plots the sequence
@@ -47,7 +47,7 @@ yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/ye
 
 X <- scale(yeast[,-c(1,10)])
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
@@ -64,7 +64,7 @@ plot(stability_collection$best, classes = yeast[,10])
 ## Use X from previous yeast example
 
 ## Works on a single clustering
-km_cl <- kmeans(X, 8, iter.max = 50, nstart=50)
+km_cl <- kmeans(X, 8, iter.max = 25, nstart=25)
 stability <- perturbationStability(from.kmeans(X, km_cl))
 
 ## Plot the stability -- a single clustering, so displays it as a

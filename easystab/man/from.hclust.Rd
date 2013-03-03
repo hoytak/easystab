@@ -61,15 +61,14 @@ plot(stability_collection)
 
 ############################################################
 ## A more detailed example using the UCI Wisconsin breast cancer dataset.
-library(lsa)
 library(mlbench)
 
-# Load and cluster the Breast Cancer dataset.
+# Load and cluster the Breast Cancer dataset using correlation distance.
 data(BreastCancer)
 
 bcdata <- na.omit(BreastCancer)
 X <- data.matrix(bcdata[,-c(1,11)])
-dx <- as.dist(1 - cosine(t(X)))
+dx <- as.dist(1 - cor(t(X)))
 
 hc <- hclust(dx)
 
