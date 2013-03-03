@@ -62,11 +62,13 @@ plot(stability_collection)
 ############################################################
 ## A more detailed example using the UCI Wisconsin breast cancer dataset.
 library(lsa)
+library(mlbench)
 
-breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",sep=",")
+# Load and cluster the Breast Cancer dataset.
+data(BreastCancer)
 
-X <- breast[,-c(1,2)]
-
+bcdata <- na.omit(BreastCancer)
+X <- data.matrix(bcdata[,-c(1,11)])
 dx <- as.dist(1 - cosine(t(X)))
 
 hc <- hclust(dx)
@@ -75,13 +77,12 @@ cl_list <- from.hclust(dx, hc)
 stability_collection <- perturbationStability(cl_list)
 
 # Information about the stability sequence
-layout(matrix(1:2, nrow=1, ncol=2))
 print(stability_collection)
 summary(stability_collection)
 
+layout(matrix(1:2, nrow=1, ncol=2))
 plot(stability_collection)
-
-plot(stability_collection$best, classes = breast[,2])
+plot(stability_collection$best, classes = bcdata[,11])
 }
 \seealso{
   \code{\link{easystab}},

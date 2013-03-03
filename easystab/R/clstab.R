@@ -225,7 +225,8 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   clusterings <- .processListOfClusterings(clusterings)$clusterings
 
   res <- optimize(f_theta, interval = c(0, 12), tol = 0.00001,
-                  clusterings = clusterings, seed = seed, n_baselines = n_baselines)
+                  clusterings = clusterings, seed = seed,
+                  n_baselines = n_baselines)
   
   res$minimum
 }
@@ -599,29 +600,30 @@ from.kmeans <- function(X, kmeans_output) {
 #'plot(stability_collection)
 #'
 #'############################################################
-#'## A more detailed example using the UCI Wisconsin breast cancer dataset. 
+#'## A more detailed example using the UCI Wisconsin breast cancer dataset.
 #'library(lsa)
-#'
-#'breast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",sep=",")
-#'
-#'X <- breast[,-c(1,2)]
-#'
+#'library(mlbench)
+#' 
+#'# Load and cluster the Breast Cancer dataset.
+#'data(BreastCancer)
+#' 
+#'bcdata <- na.omit(BreastCancer)
+#'X <- data.matrix(bcdata[,-c(1,11)])
 #'dx <- as.dist(1 - cosine(t(X)))
-#'
+#' 
 #'hc <- hclust(dx)
-#'
+#' 
 #'cl_list <- from.hclust(dx, hc)
 #'stability_collection <- perturbationStability(cl_list)
-#'
+#' 
 #'# Information about the stability sequence
-#'layout(matrix(1:2, nrow=1, ncol=2))
 #'print(stability_collection)
 #'summary(stability_collection)
-#'
+#' 
+#'layout(matrix(1:2, nrow=1, ncol=2))
 #'plot(stability_collection)
-#'
-#'plot(stability_collection$best, classes = breast[,2])
-#'
+#'plot(stability_collection$best, classes = bcdata[,11])
+#' 
 #'@export
 from.hclust <- function(dx, hc, k=1:10, method = "average") {
 
@@ -629,6 +631,7 @@ from.hclust <- function(dx, hc, k=1:10, method = "average") {
     warning("only average and median methods are supported")
     return(NA);
   }
+  
   klist <- k
   dx <- as.vector(as.dist(dx))
   n <- as.integer((sqrt(1 + 8*length(dx)) + 1) / 2)
@@ -1064,7 +1067,7 @@ plot.StabilityReport <- function(x, classes = NULL, class_colors = NULL, sort.cl
     
     if(is.null(class_colors)){
       require(RColorBrewer)
-      label_colors <- brewer.pal(n_classes, "Set3")
+      label_colors <- brewer.pal(max(c(n_classes, 3)), "Set3")
     }else{
       label_colors <- class_colors
     }

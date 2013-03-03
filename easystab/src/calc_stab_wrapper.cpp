@@ -167,7 +167,7 @@ extern "C" SEXP _calculateAverageLinkageDistances(SEXP _dists, SEXP _labels, SEX
 }
 
 extern "C" SEXP _calculateRepresentativeDistances(SEXP _rep_distances, SEXP _labels, 
-						 SEXP _n, SEXP _K, SEXP _src_dists) {
+						  SEXP _n, SEXP _K, SEXP _src_dists) {
   double * rep_distances = REAL(_rep_distances);
   size_t n = INTEGER(_n)[0];
   size_t K = INTEGER(_K)[0];

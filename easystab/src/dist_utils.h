@@ -74,7 +74,8 @@ void calculateRepresentativeDistances(double *rep_distances, int *labels,
 
   for(size_t i = 0; i < n; ++i) {
      for(size_t k = 0; k < K; ++k)
-      rep_distances[i*K + k] = D(src_dists, n, i, best_so_far_index[k]);
+       rep_distances[i*K + k] = 
+	 D(src_dists, n, i, best_so_far_index[k]);
   }
 }
   

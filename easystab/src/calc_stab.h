@@ -20,19 +20,11 @@ struct IdxPair {
   }
 };
 
-struct Buffers {
-  Buffers(size_t K) : B(K), C(K), D(K), d(K) {}
-  vector<double> B, C, D;
-  vector<IdxPair> d;
-};
-
-
-template <typename Array1, typename Array2>
-void _calc_stability_matrix(Array1& dest, const Array2& X, 
-			    size_t n, size_t K, double beta, 
-			    Buffers& buffer) {
-
-  const double beta_0d = max(0.0, exp(beta) - 1);
+// This is bad coding, but it's the quick way to do this so that
+// things are maximally optimized.  
+template <typename Array1, typename Array2, int K>
+void _calc_stability_matrix_fixed(Array1& dest, const Array2& X, 
+				  size_t n, double beta) {
 
   if(K == 1) {
     for(size_t i = 0; i < n; ++i)
@@ -40,10 +32,10 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
     return;
   }
 
-  vector<IdxPair>& d = buffer.d;
-  vector<double>& B = buffer.B;
-  vector<double>& C = buffer.C;
-  vector<double>& D = buffer.D;
+  const double beta_0d = max(0.0, exp(beta) - 1);
+
+  IdxPair d[K];
+  double B[K], C[K], D[K];
 
   for(size_t i = 0; i < n; ++i) {
 
@@ -72,7 +64,7 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
     for(size_t k = 0; k < K; ++k)
       d[k].value /= (min_value + 1e-32);
  
-    sort(d.begin(), d.end()); // sorts in descending order by value
+    sort(d, d + K); // sorts in descending order by value
 
     B[0] = 1./d[0].value;
     C[0] = 1.0;
@@ -89,6 +81,92 @@ void _calc_stability_matrix(Array1& dest, const Array2& X,
 
     for(size_t k = 0; k < K; ++k)
       dest[i*K + d[k].index] = (C[k] / B[k] - D[k]) / d[k].value;
+  }
+}
+
+template <typename Array1, typename Array2>
+void _calc_stability_matrix_var(Array1& dest, const Array2& X, 
+				size_t n, size_t K, double beta) {
+
+  const double beta_0d = max(0.0, exp(beta) - 1);
+
+  IdxPair *d = new IdxPair[K];
+  double *B = new double[3*K];
+  double *C = B + K;
+  double *D = B + 2*K;
+
+  for(size_t i = 0; i < n; ++i) {
+
+    // First map them over
+    double min_value = d[0].value;
+
+    for(size_t k = 0; k < K; ++k) {
+      double dv = X[i*K + k];
+      d[k].value = max(dv, double(0));
+      d[k].index = k;
+
+      min_value = min(min_value, d[k].value);
+    }
+
+    if(min_value == 0) {
+      size_t zero_count = 0;
+      for(size_t k = 0; k < K; ++k)
+	zero_count += ((d[k].value == 0) ? 1 : 0);
+
+      for(size_t k = 0; k < K; ++k)
+	dest[i*K + k] = (d[k].value == 0) ? (1.0 / zero_count) : 0;
+
+      continue;
+    }
+    
+    for(size_t k = 0; k < K; ++k)
+      d[k].value /= (min_value + 1e-32);
+ 
+    sort(d, d + K); // sorts in descending order by value
+
+    B[0] = 1./d[0].value;
+    C[0] = 1.0;
+
+    for(size_t k = 1; k < K; ++k) {
+      B[k] = B[k-1] + 1.0 / d[k].value;
+      C[k] = exp(beta_0d * (k - d[k].value * B[k-1]));
+    }
+
+    D[K-1] = 0;
+    
+    for(size_t k = K-1; k >= 1; --k)
+      D[k - 1] = D[k] + C[k] / (B[k-1]*(B[k-1]*d[k].value + 1) );
+
+    for(size_t k = 0; k < K; ++k)
+      dest[i*K + d[k].index] = (C[k] / B[k] - D[k]) / d[k].value;
+  }
+  
+  delete[] d;
+  delete[] B;
+}
+
+template <typename Array1, typename Array2>
+void _calc_stability_matrix(Array1& dest, const Array2& X, 
+			    size_t n, size_t K, double beta) {
+
+  switch(K) {
+  case 1: _calc_stability_matrix_fixed<Array1, Array2, 1>(dest, X, n, beta); return;
+  case 2: _calc_stability_matrix_fixed<Array1, Array2, 2>(dest, X, n, beta); return;
+  case 3: _calc_stability_matrix_fixed<Array1, Array2, 3>(dest, X, n, beta); return;
+  case 4: _calc_stability_matrix_fixed<Array1, Array2, 4>(dest, X, n, beta); return;
+  case 5: _calc_stability_matrix_fixed<Array1, Array2, 5>(dest, X, n, beta); return;
+  case 6: _calc_stability_matrix_fixed<Array1, Array2, 6>(dest, X, n, beta); return;
+  case 7: _calc_stability_matrix_fixed<Array1, Array2, 7>(dest, X, n, beta); return;
+  case 8: _calc_stability_matrix_fixed<Array1, Array2, 8>(dest, X, n, beta); return;
+  case 9: _calc_stability_matrix_fixed<Array1, Array2, 9>(dest, X, n, beta); return;
+  case 10: _calc_stability_matrix_fixed<Array1, Array2, 10>(dest, X, n, beta); return;
+  case 11: _calc_stability_matrix_fixed<Array1, Array2, 11>(dest, X, n, beta); return;
+  case 12: _calc_stability_matrix_fixed<Array1, Array2, 12>(dest, X, n, beta); return;
+  case 13: _calc_stability_matrix_fixed<Array1, Array2, 13>(dest, X, n, beta); return;
+  case 14: _calc_stability_matrix_fixed<Array1, Array2, 14>(dest, X, n, beta); return;
+  case 15: _calc_stability_matrix_fixed<Array1, Array2, 15>(dest, X, n, beta); return;
+  case 16: _calc_stability_matrix_fixed<Array1, Array2, 16>(dest, X, n, beta); return;
+  default: _calc_stability_matrix_var<Array1, Array2>(dest, X, n, K, beta); return;
   }
 }
 
@@ -135,8 +213,7 @@ private:
 
 void stability_matrix(double *dest, double *X, size_t n, size_t K, double beta) {
 
-  Buffers b(K);
-  _calc_stability_matrix(dest, X, n, K, beta, b);
+  _calc_stability_matrix(dest, X, n, K, beta);
 }
 
 void sort_stability_matrix(double *dest, int *indexes, int *K_map, 
@@ -277,12 +354,11 @@ void calculateScores(double * scores, double * confusion_matrix, double * _stabi
 		     size_t n_baselines, double beta, bool use_permutations, bool by_dimension) {
 
   vector<double> data_buffer(n*K);
-  Buffers buffer(K);
 
   double *stability_matrix = (_stability_matrix == NULL) ? new double[n*K] : _stability_matrix;
 
   // Get the first one
-  _calc_stability_matrix(stability_matrix, src, n, K, beta, buffer);
+  _calc_stability_matrix(stability_matrix, src, n, K, beta);
   const double dist_score = log_score(stability_matrix, labels, n, K);
 
   if(confusion_matrix != NULL) {
@@ -315,7 +391,7 @@ void calculateScores(double * scores, double * confusion_matrix, double * _stabi
 
   for(size_t i = 0; i < n_baselines; ++i) {
     fill_baseline_matrix(data_buffer, src, n, K, seeds[i], use_permutations, by_dimension);
-    _calc_stability_matrix(stab_buffer, data_buffer, n, K, beta, buffer);
+    _calc_stability_matrix(stab_buffer, data_buffer, n, K, beta);
     scores[i] = dist_score - log_score(stab_buffer, n, K);
   }
 
@@ -431,7 +507,6 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
 
   double *X = new double[K];
   double *s = new double[K];
-  Buffers buffer(K);
 
   for(size_t yi = 0; yi < image_ny; ++yi)
     yvec[yi] = start_y + vy * yi;
@@ -445,7 +520,7 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
       for(size_t k = 0; k < K; ++k)
 	X[k] = sqrt( sqr(xvec[xi] - centroids[2*k + 0]) + sqr(yvec[yi] - centroids[2*k + 1]));
 
-      _calc_stability_matrix(s, X, 1, K, beta, buffer);
+      _calc_stability_matrix(s, X, 1, K, beta);
 
       stab_image[yi*image_nx + xi] = *max_element(s, s + K);
     }
