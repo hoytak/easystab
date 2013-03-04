@@ -1,9 +1,9 @@
 Package: easystab
 Version: 1.0
-Date: 2013-02-24
+Date: 2013-03-02
 Title: Clustering Perturbation Stability Analysis
 Description: Clustering perturbation stability analysis toolkit
-Author: Zongjun Hu <zongjunhu@yahoo.com>, Hoyt Koepke <hoytak@gmail.com>,
+Author: Hoyt Koepke <hoytak@gmail.com>, Zongjun Hu <zongjunhu@yahoo.com>,
     Bertrand Clarke <BClarke2@med.miami.edu>
 Maintainer: Zongjun Hu <zongjunhu@yahoo.com>
 Depends:

@@ -28,14 +28,12 @@ library(easystab)
 
 X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
-km_list <- lapply(1:10, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
-## plots the sequence
+## plots the sequence and stability map of the 3 component case
 layout(matrix(1:2, nrow=1, ncol=2))
 plot(stability_collection)
-
-## plots the stability map of the 3 component case
 plot(stability_collection[[3]], classes = iris[,"Species"])
 
 ############################################################
@@ -45,7 +43,7 @@ yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/ye
 
 X <- scale(yeast[,-c(1,10)])
 
-km_list <- lapply(1:10, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
