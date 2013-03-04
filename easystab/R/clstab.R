@@ -220,11 +220,11 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
 #'summary(stability_collection)
 #'plot(stability_collection)
 #'
-getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
+getOptTheta <- function(clusterings, seed = 0, n_baselines = 25){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
 
-  res <- optimize(f_theta, interval = c(0, 12), tol = 0.00005,
+  res <- optimize(f_theta, interval = c(0, 8), tol = 0.01 / n_baselines,
                   clusterings = clusterings, seed = seed,
                   n_baselines = n_baselines)
   
@@ -333,7 +333,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
 #'\code{\link{from.kmeans}}, \code{\link{getOptTheta}},
 #'\code{\link{make2dStabilityImage}}
 #'@export
-perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta = NULL, test_pvalue = 0.05){
+perturbationStability <- function(clusterings, n_baselines = 25, seed = 0, theta = NULL, test_pvalue = 0.05){
 
   if(seed < 0){
     warning("Random seed cannot be negative. your input is ", seed)
@@ -353,7 +353,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
   n_points <- cl_info$n_points
 
   if(is.null(theta)){
-    res <- optimize(f_theta, interval = c(0, 5), tol = 0.00001,
+    res <- optimize(f_theta, interval = c(0, 8), tol = 0.01 / n_baselines,
                     clusterings = clusterings, seed = seed, n_baselines = n_baselines)
     opt_theta <- res$minimum
   } else {
