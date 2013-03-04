@@ -224,7 +224,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 32){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
 
-  res <- optimize(f_theta, interval = c(0, 12), tol = 0.00001,
+  res <- optimize(f_theta, interval = c(0, 12), tol = 0.00005,
                   clusterings = clusterings, seed = seed,
                   n_baselines = n_baselines)
   
@@ -398,8 +398,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
     cl_K_list <- .orderedStabilityCollection(clusterings, FALSE)
     
     ## Get the most stable one.
-    stability_vector <- sapply(cl_K_list, function(l) { print(l$stability)
-                                                        l$stability } )
+    stability_vector <- sapply(cl_K_list, function(l) { l$stability } )
     e_idx <- which.max(stability_vector)
     
     ## See if there is not actually a most stable clustering. 
@@ -472,20 +471,16 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'\code{\link{from.hclust}}
 #'
 #'@examples
-#'############################################################
-#'## example with kmeans function on iris data set
-#'
 #'library(easystab)
 #'
 #'X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 #'
-#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
-#'# plots the sequence
+#'## plots the sequence and stability map of the 3 component case
+#'layout(matrix(1:2, nrow=1, ncol=2))
 #'plot(stability_collection)
-#'
-#'## plots the stability map of the 3 component case
 #'plot(stability_collection[[3]], classes = iris[,"Species"])
 #'
 #'############################################################
@@ -495,15 +490,15 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'
 #'X <- scale(yeast[,-c(1,10)])
 #'
-#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'print(stability_collection)
 #'
-#'## Plot the whole stability collection 
-#'plot(stability_collection)
+#'layout(matrix(1:2, nrow=1, ncol=2))
 #'
-#' ## Plot the best class
+#'## Plot the whole stability collection and stability map of the best one
+#'plot(stability_collection)
 #'plot(stability_collection$best, classes = yeast[,10])
 #'
 #'############################################################
@@ -512,7 +507,7 @@ perturbationStability <- function(clusterings, n_baselines = 32, seed = 0, theta
 #'## Use X from previous yeast example
 #'
 #'## Works on a single clustering
-#'km_cl <- kmeans(X, 8, iter.max = 25, nstart=25)
+#'km_cl <- kmeans(X, 8, iter.max = 20, nstart=30)
 #'stability <- perturbationStability(from.kmeans(X, km_cl))
 #'
 #'## Plot the stability -- a single clustering, so displays it as a
@@ -602,28 +597,29 @@ from.kmeans <- function(X, kmeans_output) {
 #'############################################################
 #'## A more detailed example using the UCI Wisconsin breast cancer dataset.
 #'library(mlbench)
-#'library(lsa)
-#' 
+#'
 #'# Load and cluster the Breast Cancer dataset using correlation distance.
 #'data(BreastCancer)
-#' 
+#'
 #'bcdata <- na.omit(BreastCancer)
+#'
+#'## Use 1 - (x %*% y) / (|x|_2 |y|_2) to compute divergence
 #'X <- data.matrix(bcdata[,-c(1,11)])
-#'dx <- as.dist(1 - cosine(t(X)))
-#' 
+#'Y <- X %*% t(X)
+#'Ynorm <- diag(diag(Y)^(-1/2))
+#'dx <- as.dist(1 - Ynorm %*% Y %*% Ynorm)
 #'hc <- hclust(dx)
-#' 
-#'cl_list <- from.hclust(dx, hc)
+#'
+#'cl_list <- from.hclust(dx, hc, method = "median")
 #'stability_collection <- perturbationStability(cl_list)
-#' 
+#'
 #'# Information about the stability sequence
 #'print(stability_collection)
 #'summary(stability_collection)
-#' 
+#'
 #'layout(matrix(1:2, nrow=1, ncol=2))
 #'plot(stability_collection)
 #'plot(stability_collection$best, classes = bcdata[,11])
-#' 
 #'@export
 from.hclust <- function(dx, hc, k=1:10, method = "average") {
 
@@ -677,7 +673,6 @@ print.StabilityCollection <- function(x, ...) {
   cat(sprintf("Perturbation Stability Sequence:\n"))
   cat(sprintf("  %d clusterings. \n", clusterings$n_clusterings))
   cat(sprintf("  Most stable clustering has %d clusters. \n", clusterings$estimated_K))
-  
 }
 
 #'Print a detaild summary of the stability of a clustering collection.

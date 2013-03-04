@@ -24,17 +24,15 @@
   \code{perturbationStability}.
 }
 \examples{
-############################################################
-## example with kmeans function on iris data set
-
 library(easystab)
 
 X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+km_list <- lapply(1:10, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
-# plots the sequence
+## plots the sequence
+layout(matrix(1:2, nrow=1, ncol=2))
 plot(stability_collection)
 
 ## plots the stability map of the 3 component case
@@ -47,15 +45,15 @@ yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/ye
 
 X <- scale(yeast[,-c(1,10)])
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+km_list <- lapply(1:10, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
 
-## Plot the whole stability collection
-plot(stability_collection)
+layout(matrix(1:2, nrow=1, ncol=2))
 
-## Plot the best class
+## Plot the whole stability collection and stability map of the best one
+plot(stability_collection)
 plot(stability_collection$best, classes = yeast[,10])
 
 ############################################################
@@ -64,7 +62,7 @@ plot(stability_collection$best, classes = yeast[,10])
 ## Use X from previous yeast example
 
 ## Works on a single clustering
-km_cl <- kmeans(X, 8, iter.max = 25, nstart=25)
+km_cl <- kmeans(X, 8, iter.max = 20, nstart=30)
 stability <- perturbationStability(from.kmeans(X, km_cl))
 
 ## Plot the stability -- a single clustering, so displays it as a

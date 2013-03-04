@@ -14,7 +14,6 @@ Depends:
     grDevices,
     RColorBrewer
 Suggests:
-    lsa,
     rJava,
     mlbench
 LazyData: yes
