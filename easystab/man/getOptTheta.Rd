@@ -2,7 +2,7 @@
 \alias{getOptTheta}
 \title{Calculates the optimal prior parameter}
 \usage{
-  getOptTheta(clusterings, seed = 0, n_baselines = 32)
+  getOptTheta(clusterings, seed = 0, n_baselines = 25)
 }
 \arguments{
   \item{clusterings}{A single clustering or a list of

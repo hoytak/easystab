@@ -2,7 +2,7 @@
 \alias{perturbationStability}
 \title{Calculate clustering perturbation stability.}
 \usage{
-  perturbationStability(clusterings, n_baselines = 32,
+  perturbationStability(clusterings, n_baselines = 25,
     seed = 0, theta = NULL, test_pvalue = 0.05)
 }
 \arguments{
