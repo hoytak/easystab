@@ -41,7 +41,7 @@ plot(stability_collection[[3]], classes = iris[,"Species"])
 
 yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 
-X <- scale(yeast[,-c(1,10)])
+X <- scale(data.matrix(yeast[,-c(1,10)]))
 
 km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))

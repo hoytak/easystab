@@ -115,6 +115,9 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
     score_total <- score_total + .Call('_score', t(X), labels, d[1], d[2],
                                        as.integer(seed), as.integer(n_baselines), theta, FALSE, FALSE)
   }
+  
+  print(c(theta, score_total))
+  
   -score_total
 }
 
@@ -212,7 +215,7 @@ f_theta <- function(theta, clusterings, seed, n_baselines){
 #'plot(stability2, classes=labels)
 #'
 #'## Now try several numbers of clusters using kmeans
-#'km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+#'km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'cl_list <- from.kmeans(X, km_list)
 #'stability_collection <- perturbationStability(cl_list)
 #'
@@ -224,7 +227,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 25){
   
   clusterings <- .processListOfClusterings(clusterings)$clusterings
 
-  res <- optimize(f_theta, interval = c(0, 8), tol = 0.01 / n_baselines,
+  res <- optimize(f_theta, interval = c(0, 5), tol = 0.01 / n_baselines,
                   clusterings = clusterings, seed = seed,
                   n_baselines = n_baselines)
   
@@ -321,7 +324,7 @@ getOptTheta <- function(clusterings, seed = 0, n_baselines = 25){
 #'plot(stability2, classes=labels)
 #'
 #'## Now try several numbers of clusters using kmeans
-#'km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+#'km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'cl_list <- from.kmeans(X, km_list)
 #'stability_collection <- perturbationStability(cl_list)
 #'
@@ -353,7 +356,7 @@ perturbationStability <- function(clusterings, n_baselines = 25, seed = 0, theta
   n_points <- cl_info$n_points
 
   if(is.null(theta)){
-    res <- optimize(f_theta, interval = c(0, 8), tol = 0.01 / n_baselines,
+    res <- optimize(f_theta, interval = c(0, 5), tol = 0.01 / n_baselines,
                     clusterings = clusterings, seed = seed, n_baselines = n_baselines)
     opt_theta <- res$minimum
   } else {
@@ -488,7 +491,7 @@ perturbationStability <- function(clusterings, n_baselines = 25, seed = 0, theta
 #'
 #'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 #'
-#'X <- scale(yeast[,-c(1,10)])
+#'X <- scale(data.matrix(yeast[,-c(1,10)]))
 #'
 #'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
@@ -773,7 +776,7 @@ summary.StabilityCollection <- function(object, ...) {
 #'
 #'
 #'## Now try a range of numbers of clusters using kmeans
-#'km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=50, nstart=100)})
+#'km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 #'stabilities1 <- perturbationStability(from.kmeans(X, km_list1))
 #'
 #'plot(stabilities1)
