@@ -68,6 +68,9 @@ data(BreastCancer)
 
 bcdata <- na.omit(BreastCancer)
 
+# to replicate the results in paper, remove the following line
+bcdata <- bcdata[1:200,]
+
 ## Use 1 - (x \%*\% y) / (|x|_2 |y|_2) to compute divergence
 X <- data.matrix(bcdata[,-c(1,11)])
 Y <- X \%*\% t(X)

@@ -60,7 +60,8 @@ library(easystab)
 
 cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 
-Z <- make2dStabilityImage(cen, buffer=2)
+#to generate image with higher resolution, use larger size in the following line
+Z <- make2dStabilityImage(cen, buffer=2, size=c(200,200))
 image(Z$x, Z$y, Z$stability)
 points(Z$centroids)
 
@@ -69,7 +70,7 @@ points(Z$centroids)
 layout(matrix(1:4, ncol = 2, byrow=TRUE))
 for(i in 1:4) {
   t <- (i - 1) * 0.5
-  Z <- make2dStabilityImage(cen, theta=t, buffer=2)
+  Z <- make2dStabilityImage(cen, theta=t, buffer=2, size=c(200,200))
   image(Z$x, Z$y, Z$stability, main = sprintf("Theta = \%1.2f.", t),
         xlab = "x", ylab="y")
 }

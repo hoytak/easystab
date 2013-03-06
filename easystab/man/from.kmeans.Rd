@@ -41,6 +41,9 @@ plot(stability_collection[[3]], classes = iris[,"Species"])
 
 yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 
+# to replicate results in paper, please comment out the following line
+yeast <- yeast[1:300,]
+
 X <- scale(data.matrix(yeast[,-c(1,10)]))
 
 km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})

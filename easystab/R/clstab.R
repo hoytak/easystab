@@ -491,6 +491,9 @@ perturbationStability <- function(clusterings, n_baselines = 25, seed = 0, theta
 #'
 #'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 #'
+#'# to replicate results in paper, please comment out the following line
+#'yeast <- yeast[1:300,]
+#'
 #'X <- scale(data.matrix(yeast[,-c(1,10)]))
 #'
 #'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
@@ -605,6 +608,9 @@ from.kmeans <- function(X, kmeans_output) {
 #'data(BreastCancer)
 #'
 #'bcdata <- na.omit(BreastCancer)
+#'
+#'# to replicate the results in paper, remove the following line
+#'bcdata <- bcdata[1:200,]
 #'
 #'## Use 1 - (x %*% y) / (|x|_2 |y|_2) to compute divergence
 #'X <- data.matrix(bcdata[,-c(1,11)])
@@ -1133,7 +1139,8 @@ plot.StabilityReport <- function(x, classes = NULL, class_colors = NULL, sort.cl
 #'
 #'cen <- matrix(c(0,-2,1,2,-2,1), ncol=2, byrow=TRUE)
 #'
-#'Z <- make2dStabilityImage(cen, buffer=2)
+#'#to generate image with higher resolution, use larger size in the following line
+#'Z <- make2dStabilityImage(cen, buffer=2, size=c(200,200))
 #'image(Z$x, Z$y, Z$stability)
 #'points(Z$centroids)
 #'
@@ -1142,7 +1149,7 @@ plot.StabilityReport <- function(x, classes = NULL, class_colors = NULL, sort.cl
 #' layout(matrix(1:4, ncol = 2, byrow=TRUE))
 #' for(i in 1:4) {
 #'   t <- (i - 1) * 0.5
-#'   Z <- make2dStabilityImage(cen, theta=t, buffer=2)
+#'   Z <- make2dStabilityImage(cen, theta=t, buffer=2, size=c(200,200))
 #'   image(Z$x, Z$y, Z$stability, main = sprintf("Theta = %1.2f.", t),
 #'         xlab = "x", ylab="y")
 #' }
