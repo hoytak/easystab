@@ -41,12 +41,16 @@ plot(stability_collection[[3]], classes = iris[,"Species"])
 
 yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 
-# to replicate results in paper, please comment out the following line
-yeast <- yeast[1:300,]
-
 X <- scale(data.matrix(yeast[,-c(1,10)]))
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
+## To replicate results in paper, please comment out the following lines
+## and increase the number of clusters considered to 12.
+rowmask <- yeast[,10] \%in\% c("MIT", "ME1", "ME2", "ME3")
+yeast <- yeast[rowmask,]
+X <- X[rowmask,]
+
+km_list <- lapply(1:6, function(k) { kmeans(X, k, iter.max=20, nstart=100)})
+
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)

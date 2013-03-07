@@ -491,12 +491,16 @@ perturbationStability <- function(clusterings, n_baselines = 25, seed = 0, theta
 #'
 #'yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 #'
-#'# to replicate results in paper, please comment out the following line
-#'yeast <- yeast[1:300,]
-#'
 #'X <- scale(data.matrix(yeast[,-c(1,10)]))
 #'
-#'km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
+#'## To replicate results in paper, please comment out the following lines
+#'## and increase the number of clusters considered to 12.  
+#'rowmask <- yeast[,10] %in% c("MIT", "ME1", "ME2", "ME3")
+#'yeast <- yeast[rowmask,]
+#'X <- X[rowmask,]
+#'
+#'km_list <- lapply(1:6, function(k) { kmeans(X, k, iter.max=20, nstart=100)})
+#'
 #'stability_collection <- perturbationStability(from.kmeans(X, km_list))
 #'
 #'print(stability_collection)
@@ -609,15 +613,12 @@ from.kmeans <- function(X, kmeans_output) {
 #'
 #'bcdata <- na.omit(BreastCancer)
 #'
-#'# to replicate the results in paper, remove the following line
-#'bcdata <- bcdata[1:200,]
-#'
 #'## Use 1 - (x %*% y) / (|x|_2 |y|_2) to compute divergence
 #'X <- data.matrix(bcdata[,-c(1,11)])
 #'Y <- X %*% t(X)
 #'Ynorm <- diag(diag(Y)^(-1/2))
 #'dx <- as.dist(1 - Ynorm %*% Y %*% Ynorm)
-#'hc <- hclust(dx)
+#'hc <- hclust(dx, method="complete")
 #'
 #'cl_list <- from.hclust(dx, hc, method = "median")
 #'stability_collection <- perturbationStability(cl_list)

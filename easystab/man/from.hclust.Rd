@@ -68,15 +68,12 @@ data(BreastCancer)
 
 bcdata <- na.omit(BreastCancer)
 
-# to replicate the results in paper, remove the following line
-bcdata <- bcdata[1:200,]
-
 ## Use 1 - (x \%*\% y) / (|x|_2 |y|_2) to compute divergence
 X <- data.matrix(bcdata[,-c(1,11)])
 Y <- X \%*\% t(X)
 Ynorm <- diag(diag(Y)^(-1/2))
 dx <- as.dist(1 - Ynorm \%*\% Y \%*\% Ynorm)
-hc <- hclust(dx)
+hc <- hclust(dx, method="complete")
 
 cl_list <- from.hclust(dx, hc, method = "median")
 stability_collection <- perturbationStability(cl_list)
