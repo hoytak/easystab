@@ -530,8 +530,8 @@ void make_stability_image(double *stab_image, size_t image_nx, size_t image_ny,
   // Now, go through and set the pixels of the centroids to 1.
 
   for(size_t k = 0; k < K; ++k) {
-    long xi = fround( (centroids[2*k + 0] - start_x) / vx);
-    long yi = fround( (centroids[2*k + 1] - start_y) / vy);
+    long xi = fround( (centroids[2*k + 0] - start_x) / vx, 0);
+    long yi = fround( (centroids[2*k + 1] - start_y) / vy, 0);
 
     if(xi >= 0 && xi < long(image_nx) 
        && yi >= 0 && yi < long(image_ny) ) {
