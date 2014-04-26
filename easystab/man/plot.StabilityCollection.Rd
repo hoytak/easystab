@@ -61,7 +61,7 @@ X <- t(cbind(rbind(rnorm(cl.size,mean=cen[[1,1]]), rnorm(cl.size,mean=cen[[1,2]]
 
 
 ## Now try a range of numbers of clusters using kmeans
-km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=50, nstart=100)})
+km_list1 <- lapply(1:6, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stabilities1 <- perturbationStability(from.kmeans(X, km_list1))
 
 plot(stabilities1)

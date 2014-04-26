@@ -24,20 +24,16 @@
   \code{perturbationStability}.
 }
 \examples{
-############################################################
-## example with kmeans function on iris data set
-
 library(easystab)
 
 X <- scale(iris[,c("Sepal.Length","Sepal.Width","Petal.Length","Petal.Width")])
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
-# plots the sequence
+## plots the sequence and stability map of the 3 component case
+layout(matrix(1:2, nrow=1, ncol=2))
 plot(stability_collection)
-
-## plots the stability map of the 3 component case
 plot(stability_collection[[3]], classes = iris[,"Species"])
 
 ############################################################
@@ -45,17 +41,24 @@ plot(stability_collection[[3]], classes = iris[,"Species"])
 
 yeast <- read.table("http://archive.ics.uci.edu/ml/machine-learning-databases/yeast/yeast.data")
 
-X <- scale(yeast[,-c(1,10)])
+X <- scale(data.matrix(yeast[,-c(1,10)]))
 
-km_list <- lapply(1:12, function(k) { kmeans(X, k, iter.max=25, nstart=25)})
+## To replicate results in paper, please comment out the following lines
+## and increase the number of clusters considered to 12.
+rowmask <- yeast[,10] \%in\% c("MIT", "ME1", "ME2", "ME3")
+yeast <- yeast[rowmask,]
+X <- X[rowmask,]
+
+km_list <- lapply(1:6, function(k) { kmeans(X, k, iter.max=20, nstart=100)})
+
 stability_collection <- perturbationStability(from.kmeans(X, km_list))
 
 print(stability_collection)
 
-## Plot the whole stability collection
-plot(stability_collection)
+layout(matrix(1:2, nrow=1, ncol=2))
 
-## Plot the best class
+## Plot the whole stability collection and stability map of the best one
+plot(stability_collection)
 plot(stability_collection$best, classes = yeast[,10])
 
 ############################################################
@@ -64,7 +67,7 @@ plot(stability_collection$best, classes = yeast[,10])
 ## Use X from previous yeast example
 
 ## Works on a single clustering
-km_cl <- kmeans(X, 8, iter.max = 25, nstart=25)
+km_cl <- kmeans(X, 8, iter.max = 20, nstart=30)
 stability <- perturbationStability(from.kmeans(X, km_cl))
 
 ## Plot the stability -- a single clustering, so displays it as a

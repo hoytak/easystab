@@ -2,7 +2,7 @@
 \alias{perturbationStability}
 \title{Calculate clustering perturbation stability.}
 \usage{
-  perturbationStability(clusterings, n_baselines = 32,
+  perturbationStability(clusterings, n_baselines = 25,
     seed = 0, theta = NULL, test_pvalue = 0.05)
 }
 \arguments{
@@ -102,7 +102,7 @@ summary(stability2)
 plot(stability2, classes=labels)
 
 ## Now try several numbers of clusters using kmeans
-km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=50, nstart=50)})
+km_list <- lapply(1:8, function(k) { kmeans(X, k, iter.max=20, nstart=30)})
 cl_list <- from.kmeans(X, km_list)
 stability_collection <- perturbationStability(cl_list)
 
